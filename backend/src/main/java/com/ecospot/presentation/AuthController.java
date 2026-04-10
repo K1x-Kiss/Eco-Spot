@@ -8,8 +8,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ecospot.business.AuthService;
-import com.ecospot.presentation.DTO.CreateUserRequest;
-import com.ecospot.presentation.DTO.LoginRequest;
+import com.ecospot.presentation.dato.CreateUserRequest;
+import com.ecospot.presentation.dato.LoginRequest;
 
 @RestController
 @RequestMapping("/api/auth")

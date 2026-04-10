@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import com.ecospot.persistance.entity.Roles;
+import com.ecospot.persistance.dato.Roles;
 import com.ecospot.persistance.entity.User;
 import com.ecospot.persistance.repository.UserRepository;
 import com.ecospot.util.JWT;

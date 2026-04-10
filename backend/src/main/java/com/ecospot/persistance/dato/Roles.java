@@ -1,4 +1,4 @@
-package com.ecospot.persistance.entity;
+package com.ecospot.persistance.dato;
 
 public enum Roles {
   TOURIST,

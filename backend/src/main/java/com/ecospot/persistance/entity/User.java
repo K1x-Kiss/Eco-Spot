@@ -3,6 +3,7 @@ package com.ecospot.persistance.entity;
 import java.util.UUID;
 import java.time.LocalDateTime;
 
+import com.ecospot.persistance.dato.Roles;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.Column;
@@ -30,7 +31,7 @@ public class User {
   private String email;
 
   @JsonIgnore
-  @Column(name = "password", nullable = false, length = 60)
+  @Column(name = "password", nullable = false, columnDefinition = "TEXT")
   private String password = "";
 
   @Column(name = "city", nullable = true, length = 80)
