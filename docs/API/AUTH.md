@@ -1,13 +1,10 @@
+# Autenticación
 
-# Documentación de la API - Eco-Spot Backend
-
-## Autenticación
-
-### Registrar Usuario
+## Registrar Usuario
 
 Crea un nuevo usuario en el sistema.
 
-**URL:** `POST /api/auth/register`
+**URL:** `POST /api/v1/auth/register`
 
 **Cuerpo de la solicitud (JSON):**
 ```json
@@ -37,7 +34,7 @@ Crea un nuevo usuario en el sistema.
 
 **Ejemplo de solicitud:**
 ```bash
-curl -X POST http://localhost:8080/api/auth/register \
+curl -X POST http://localhost:8080/api/v1/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Juan",
@@ -48,11 +45,11 @@ curl -X POST http://localhost:8080/api/auth/register \
   }'
 ```
 
-### Iniciar Sesión
+## Iniciar Sesión
 
 Autentica a un usuario y retorna un token JWT.
 
-**URL:** `POST /api/auth/login`
+**URL:** `POST /api/v1/auth/login`
 
 **Cuerpo de la solicitud (JSON):**
 ```json
@@ -74,7 +71,7 @@ Autentica a un usuario y retorna un token JWT.
 
 **Ejemplo de solicitud:**
 ```bash
-curl -X POST http://localhost:8080/api/auth/login \
+curl -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "juan@example.com",
