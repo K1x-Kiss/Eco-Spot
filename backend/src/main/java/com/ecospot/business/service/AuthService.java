@@ -1,4 +1,4 @@
-package com.ecospot.business;
+package com.ecospot.business.service;
 
 import java.util.Optional;
 

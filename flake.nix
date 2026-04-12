@@ -6,8 +6,9 @@
     - frontend: Creates a Flutter development Environment with an android emulator
     - backend: Creates a Java Spring Development Environment
 
-    !!! Runnables
+    !!! Runables
     - backend: runs the backend projects.
+    - backend-test: runs the backend test.
     - start-db: Creates and initialize a PostgreSQL database that store the data in a folder called .pgdata
     - stop-db: Stop the PostgreSQL database
     - reset-db: Reset (delete the .pgdata folder) and Stop the PostgreSQL database
@@ -24,7 +25,6 @@
   }: let
     system = "x86_64-linux";
     pkgs = nixpkgs.legacyPackages.${system};
-
     DB_URL = "jdbc:postgresql://localhost:5432/dev";
     DB_USER = "dbuser";
     DB_PASSWORD = "dbpass";
@@ -35,9 +35,7 @@
       backend = pkgs.mkShell {
         buildInputs = with pkgs; [
           openjdk25
-          maven3
         ];
-
         DB_URL = "${DB_URL}";
         DB_USER = "${DB_USER}";
         DB_PASSWORD = "${DB_PASSWORD}";
@@ -46,8 +44,12 @@
         JWT_EXPIRATION = 864000;
 
         JAVA_HOME = "${pkgs.openjdk25.home}";
-
-        shellHook = '''';
+        shellHook = ''
+          if [[ $(basename "$PWD") != "backend" ]]; then
+            echo "> You're not in the required folder 'backend/' "
+            exit
+          fi
+        '';
       };
 
       # Frontend
@@ -76,14 +78,28 @@
               export DB_USER="${DB_USER}";
               export DB_PASSWORD="${DB_PASSWORD}";
               export JAVA_HOME="${pkgs.openjdk25.home}";
-              ./mvnw clean
-              ./mvnw spring-boot:run
+              nix develop .#backend --command ./mvnw spring-boot:run
             else
               echo "> You're not in the required folder 'backend/' "
               exit
             fi
           '';
         in "${script}/bin/start-backend";
+      };
+
+      backend-test = {
+        type = "app";
+        program = let
+          script = pkgs.writeShellScriptBin "start-backend-test" ''
+            if [[ $(basename "$PWD") == "backend" ]]; then
+              export JAVA_HOME="${pkgs.openjdk25.home}";
+              nix develop .#backend --command ./mvnw test
+            else
+              echo "> You're not in the required folder 'backend/' "
+              exit
+            fi
+          '';
+        in "${script}/bin/start-backend-test";
       };
 
       frontend = {

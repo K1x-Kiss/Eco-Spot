@@ -14,4 +14,6 @@ public interface BusinessRepository extends JpaRepository<Business, UUID> {
 
   List<Business> findByCityAndCountry(String city, String country);
 
+  List<Business> findByNameContainingIgnoreCase(String name);
+
 }

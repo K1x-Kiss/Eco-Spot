@@ -93,11 +93,94 @@ public class TouristControllerTest {
   }
 
   @Test
-  void getItemsByCategory_withInvalidCategory_returns401() throws Exception {
+  void getItemsByCategory_withInvalidCategory_returns400() throws Exception {
     mockMvc.perform(get("/api/v1/tourist/items")
         .param("category", "INVALID")
         .header("Authorization", "Bearer " + validToken)
         .contentType(MediaType.APPLICATION_JSON))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void search_withValidTokenAndNoCategory_returnsOk() throws Exception {
+    mockMvc.perform(get("/api/v1/tourist/search")
+        .param("searchBy", "test")
+        .header("Authorization", "Bearer " + validToken)
+        .contentType(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  void search_withValidTokenAndRentalCategory_returnsOk() throws Exception {
+    mockMvc.perform(get("/api/v1/tourist/search")
+        .param("category", "RENTAL")
+        .param("searchBy", "test")
+        .header("Authorization", "Bearer " + validToken)
+        .contentType(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  void search_withValidTokenAndBusinessCategory_returnsOk() throws Exception {
+    mockMvc.perform(get("/api/v1/tourist/search")
+        .param("category", "BUSINESS")
+        .param("searchBy", "test")
+        .header("Authorization", "Bearer " + validToken)
+        .contentType(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  void search_withValidTokenAndExperienceCategory_returnsOk() throws Exception {
+    mockMvc.perform(get("/api/v1/tourist/search")
+        .param("category", "EXPERIENCE")
+        .param("searchBy", "test")
+        .header("Authorization", "Bearer " + validToken)
+        .contentType(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  void search_withoutAuthorizationHeader_returns400() throws Exception {
+    mockMvc.perform(get("/api/v1/tourist/search")
+        .param("searchBy", "test")
+        .contentType(MediaType.APPLICATION_JSON))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void search_withInvalidToken_returns401() throws Exception {
+    mockMvc.perform(get("/api/v1/tourist/search")
+        .param("searchBy", "test")
+        .header("Authorization", "Bearer invalid-token")
+        .contentType(MediaType.APPLICATION_JSON))
         .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void search_withInvalidCategory_returns400() throws Exception {
+    mockMvc.perform(get("/api/v1/tourist/search")
+        .param("category", "INVALID")
+        .param("searchBy", "test")
+        .header("Authorization", "Bearer " + validToken)
+        .contentType(MediaType.APPLICATION_JSON))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void search_withEmptySearchBy_returns400() throws Exception {
+    mockMvc.perform(get("/api/v1/tourist/search")
+        .param("searchBy", "")
+        .header("Authorization", "Bearer " + validToken)
+        .contentType(MediaType.APPLICATION_JSON))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void search_withoutSearchByParam_returns400() throws Exception {
+    mockMvc.perform(get("/api/v1/tourist/search")
+        .header("Authorization", "Bearer " + validToken)
+        .contentType(MediaType.APPLICATION_JSON))
+        .andExpect(status().isBadRequest());
   }
 }

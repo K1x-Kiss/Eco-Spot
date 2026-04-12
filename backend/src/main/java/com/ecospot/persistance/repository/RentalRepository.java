@@ -14,4 +14,6 @@ public interface RentalRepository extends JpaRepository<Rental, UUID> {
 
   List<Rental> findByCityAndCountry(String city, String country);
 
+  List<Rental> findByNameContainingIgnoreCase(String name);
+
 }

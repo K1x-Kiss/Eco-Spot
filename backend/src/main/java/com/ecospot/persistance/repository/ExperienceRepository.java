@@ -14,4 +14,6 @@ public interface ExperienceRepository extends JpaRepository<Experience, UUID> {
 
   List<Experience> findByCityAndCountry(String city, String country);
 
+  List<Experience> findByNameContainingIgnoreCase(String name);
+
 }

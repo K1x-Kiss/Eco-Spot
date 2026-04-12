@@ -51,4 +51,3 @@ windows/
 .pgdata/
 .env
 test.http
-DOCS.md

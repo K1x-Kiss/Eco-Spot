@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.ecospot.business.AuthService;
+import com.ecospot.business.service.AuthService;
 import com.ecospot.presentation.dato.CreateUserRequest;
 import com.ecospot.presentation.dato.LoginRequest;
 

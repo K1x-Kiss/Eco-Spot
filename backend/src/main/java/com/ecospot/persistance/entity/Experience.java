@@ -52,14 +52,14 @@ public class Experience {
   @Column(name = "location", nullable = true, columnDefinition = "TEXT")
   private String location = "";
 
-  @Column(name = "value", nullable = false)
-  private Double value = 0.0;
+  @Column(name = "price", nullable = false)
+  private Double price = 0.0;
 
   public Experience() {
   }
 
   public Experience(User user, LocalDateTime startingDate, LocalDateTime endDate, String name,
-      String description, String contact, String city, String country, String location, Double value) {
+      String description, String contact, String city, String country, String location, Double price) {
     this.user = user;
     this.startingDate = startingDate;
     this.endDate = endDate;
@@ -69,7 +69,7 @@ public class Experience {
     this.city = city != null ? city.toUpperCase() : "";
     this.country = country != null ? country.toUpperCase() : "";
     this.location = location;
-    this.value = value;
+    this.price = price;
   }
 
   public UUID getId() {
@@ -168,12 +168,12 @@ public class Experience {
     this.location = location;
   }
 
-  public Double getValue() {
-    return value;
+  public Double getPrice() {
+    return price;
   }
 
-  public void setValue(Double value) {
-    this.value = value;
+  public void setPrice(Double price) {
+    this.price = price;
   }
 
 }
