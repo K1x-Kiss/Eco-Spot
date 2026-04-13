@@ -49,6 +49,14 @@ public class UserService {
     }
   }
 
+  public Optional<User> getUserByToken(String token) {
+    if (!jwt.validateToken(token)) {
+      logger.warn("Invalid token provided for getUserByToken");
+      return Optional.empty();
+    }
+    return getUserFromToken(token);
+  }
+
   private Optional<User> getUserFromToken(String token) {
     UUID userId = jwt.getUserId(token);
     return userRepository.findById(userId);

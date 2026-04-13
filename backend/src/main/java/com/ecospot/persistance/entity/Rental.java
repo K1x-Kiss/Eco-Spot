@@ -1,13 +1,17 @@
 package com.ecospot.persistance.entity;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 
 @Entity
@@ -60,6 +64,9 @@ public class Rental {
 
   @Column(name = "value_night", nullable = false)
   private double valueNight = 0.0;
+
+  @OneToMany(mappedBy = "rental", cascade = CascadeType.ALL, orphanRemoval = true)
+  private List<Image> images = new ArrayList<>();
 
   public Rental() {
   }
@@ -199,6 +206,14 @@ public class Rental {
 
   public void setValueNight(double valueNight) {
     this.valueNight = valueNight;
+  }
+
+  public List<Image> getImages() {
+    return images;
+  }
+
+  public void setImages(List<Image> images) {
+    this.images = images;
   }
 
 }

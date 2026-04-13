@@ -1,5 +1,6 @@
 package com.ecospot.presentation;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -52,6 +53,45 @@ public class UserControllerTest {
     testUser = userRepository.save(testUser);
 
     validToken = jwt.generateToken(testUser.getId(), "TOURIST");
+  }
+
+  @Test
+  void getCurrentUser_withValidToken_returnsOk() throws Exception {
+    mockMvc.perform(get("/api/v1/users/me")
+        .header("Authorization", "Bearer " + validToken)
+        .contentType(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  void getCurrentUser_withoutAuthorization_returns400() throws Exception {
+    mockMvc.perform(get("/api/v1/users/me")
+        .contentType(MediaType.APPLICATION_JSON))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void getCurrentUser_withInvalidToken_returns401() throws Exception {
+    mockMvc.perform(get("/api/v1/users/me")
+        .header("Authorization", "Bearer invalid-token")
+        .contentType(MediaType.APPLICATION_JSON))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void getCurrentUser_withBusinessUser_returnsOk() throws Exception {
+    userRepository.deleteAll();
+    User businessUser = new User("Business", "User", "business@example.com", passwordEncoder.encode("password123"),
+        "Madrid", "ESPAÑA",
+        Roles.BUSINESS);
+    businessUser = userRepository.save(businessUser);
+
+    String businessToken = jwt.generateToken(businessUser.getId(), "BUSINESS");
+
+    mockMvc.perform(get("/api/v1/users/me")
+        .header("Authorization", "Bearer " + businessToken)
+        .contentType(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk());
   }
 
   @Test
