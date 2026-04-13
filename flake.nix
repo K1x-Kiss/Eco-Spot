@@ -92,7 +92,7 @@
         program = let
           script = pkgs.writeShellScriptBin "start-backend-test" ''
             if [[ $(basename "$PWD") == "backend" ]]; then
-              export JAVA_HOME="${pkgs.openjdk25.home}";
+              export JAVA_HOME=${pkgs.openjdk25.home}
               nix develop .#backend --command ./mvnw test
             else
               echo "> You're not in the required folder 'backend/' "

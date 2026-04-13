@@ -3,7 +3,7 @@ package com.ecospot.persistance.entity;
 import java.util.UUID;
 import java.time.LocalDateTime;
 
-import com.ecospot.persistance.dato.Roles;
+import com.ecospot.business.dato.Roles;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.Column;

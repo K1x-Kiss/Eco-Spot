@@ -13,15 +13,15 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-import com.ecospot.persistance.dato.Roles;
+import com.ecospot.business.dato.Roles;
 import com.ecospot.persistance.entity.User;
 import com.ecospot.persistance.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @SpringBootTest
 @TestPropertySource(properties = {
-  "jwt.secret=EcoSpot2026SecretKeyForJWTTokenGen12345678901234567890123456789012345678901234567890",
-  "jwt.expiration=864000"
+    "jwt.secret=EcoSpot2026SecretKeyForJWTTokenGen12345678901234567890123456789012345678901234567890",
+    "jwt.expiration=864000"
 })
 public class AuthControllerTest {
 
@@ -62,7 +62,8 @@ public class AuthControllerTest {
 
   @Test
   void register_withDuplicateEmail_returnsConflict() throws Exception {
-    User existingUser = new User("John", "Doe", "john@example.com", passwordEncoder.encode("password123"), "Madrid", "ESPAÑA", Roles.TOURIST);
+    User existingUser = new User("John", "Doe", "john@example.com", passwordEncoder.encode("password123"), "Madrid",
+        "ESPAÑA", Roles.TOURIST);
     userRepository.save(existingUser);
 
     mockMvc.perform(post("/api/v1/auth/register")

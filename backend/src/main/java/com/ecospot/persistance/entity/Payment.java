@@ -3,7 +3,7 @@ package com.ecospot.persistance.entity;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-import com.ecospot.persistance.dato.PaymentStatus;
+import com.ecospot.business.dato.PaymentStatus;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
