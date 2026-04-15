@@ -190,3 +190,65 @@ curl -X GET "http://localhost:8080/api/v1/tourist/search?category=RENTAL&searchB
 ```
 
 **Nota:** Los resultados se ordenan prioritizando los elementos del país del usuario autenticado.
+
+## Obtener Reservaciones del Usuario
+
+Obtiene las reservaciones del usuario autenticado, filtradas por upcoming (próximas o pasadas).
+
+**URL:** `GET /api/v1/tourist/reservations`
+
+**Encabezados:**
+| Campo | Valor |
+|-------|-------|
+| Authorization | Bearer {TOKEN_JWT} |
+
+**Parámetros:**
+| Campo | Tipo | Obligatorio | Descripción |
+|-------|------|-------------|-------------|
+| upcoming | Boolean | No | `true` para reservaciones futuras, `false` para pasadas. Por defecto `true` |
+
+**Respuestas:**
+- **200 OK:** Reservaciones encontradas
+- **400 Bad Request:** Token no proporcionado
+- **401 Unauthorized:** Token inválido
+
+**Ejemplo de solicitud (próximas):**
+```bash
+curl -X GET "http://localhost:8080/api/v1/tourist/reservations?upcoming=true" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+**Ejemplo de solicitud (pasadas):**
+```bash
+curl -X GET "http://localhost:8080/api/v1/tourist/reservations?upcoming=false" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+**Estructura de respuesta:**
+```json
+[
+  {
+    "id": "...",
+    "name": "...",
+    "description": "...",
+    "contact": "...",
+    "size": 100,
+    "peopleQuantity": 4,
+    "rooms": 2,
+    "bathrooms": 1,
+    "city": "Madrid",
+    "country": "ESPAÑA",
+    "location": "...",
+    "valueNight": 150.0,
+    "enable": true,
+    "reviewAverage": 4.5,
+    "images": [
+      { "id": "...", "extension": ".jpg" }
+    ]
+  }
+]
+```
+
+**Nota:** 
+- Cada elemento en la respuesta es un `RentalResponse` con los detalles completos del rental.
+- Se devuelven los rentals únicos de las reservaciones (sin duplicados si el usuario tiene múltiples reservaciones en el mismo rental).

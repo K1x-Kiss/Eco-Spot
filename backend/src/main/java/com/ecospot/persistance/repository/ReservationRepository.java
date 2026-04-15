@@ -26,4 +26,8 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID> 
 
   boolean existsByRentalIdAndUserId(UUID rentalId, UUID userId);
 
+  List<Reservation> findByUserIdAndEndDateAfter(UUID userId, LocalDate date);
+
+  List<Reservation> findByUserIdAndEndDateBefore(UUID userId, LocalDate date);
+
 }

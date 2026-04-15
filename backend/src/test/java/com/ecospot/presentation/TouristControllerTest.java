@@ -343,4 +343,55 @@ public class TouristControllerTest {
         .andExpect(status().isForbidden());
   }
 
+  @Test
+  void getReservations_withValidTokenAndUpcomingTrue_returnsOk() throws Exception {
+    Rental rental = rentalRepository.findAll().get(0);
+
+    Reservation reservation = new Reservation(
+        testUser,
+        rental,
+        LocalDate.now().plusDays(10),
+        LocalDate.now().plusDays(15));
+    reservationRepository.save(reservation);
+
+    mockMvc.perform(get("/api/v1/tourist/reservations")
+        .param("upcoming", "true")
+        .header("Authorization", "Bearer " + validToken)
+        .contentType(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  void getReservations_withValidTokenAndUpcomingFalse_returnsOk() throws Exception {
+    Rental rental = rentalRepository.findAll().get(0);
+
+    Reservation reservation = new Reservation(
+        testUser,
+        rental,
+        LocalDate.now().minusDays(10),
+        LocalDate.now().minusDays(5));
+    reservationRepository.save(reservation);
+
+    mockMvc.perform(get("/api/v1/tourist/reservations")
+        .param("upcoming", "false")
+        .header("Authorization", "Bearer " + validToken)
+        .contentType(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  void getReservations_withoutAuthorization_returns400() throws Exception {
+    mockMvc.perform(get("/api/v1/tourist/reservations")
+        .contentType(MediaType.APPLICATION_JSON))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void getReservations_withInvalidToken_returns401() throws Exception {
+    mockMvc.perform(get("/api/v1/tourist/reservations")
+        .header("Authorization", "Bearer invalid-token")
+        .contentType(MediaType.APPLICATION_JSON))
+        .andExpect(status().isUnauthorized());
+  }
+
 }

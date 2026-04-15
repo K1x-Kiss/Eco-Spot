@@ -16,6 +16,8 @@ import com.ecospot.business.dato.CreateReservationRequest;
 import com.ecospot.business.dato.CreateReviewRequest;
 import com.ecospot.business.dato.ItemCategory;
 import com.ecospot.business.dato.ItemsResponse;
+import com.ecospot.business.dato.RentalResponse;
+import com.ecospot.business.dato.RentalResponse.ImageInfo;
 import com.ecospot.persistance.entity.Business;
 import com.ecospot.persistance.entity.Experience;
 import com.ecospot.persistance.entity.Rental;
@@ -24,6 +26,7 @@ import com.ecospot.persistance.entity.Review;
 import com.ecospot.persistance.entity.User;
 import com.ecospot.persistance.repository.BusinessRepository;
 import com.ecospot.persistance.repository.ExperienceRepository;
+import com.ecospot.persistance.repository.ImageRepository;
 import com.ecospot.persistance.repository.RentalRepository;
 import com.ecospot.persistance.repository.ReservationRepository;
 import com.ecospot.persistance.repository.ReviewRepository;
@@ -38,17 +41,19 @@ public class TouristService {
   private final RentalRepository rentalRepository;
   private final BusinessRepository businessRepository;
   private final ExperienceRepository experienceRepository;
+  private final ImageRepository imageRepository;
   private final UserRepository userRepository;
   private final ReservationRepository reservationRepository;
   private final ReviewRepository reviewRepository;
 
   public TouristService(JWT jwt, RentalRepository rentalRepository, BusinessRepository businessRepository,
-      ExperienceRepository experienceRepository, UserRepository userRepository,
+      ExperienceRepository experienceRepository, ImageRepository imageRepository, UserRepository userRepository,
       ReservationRepository reservationRepository, ReviewRepository reviewRepository) {
     this.jwt = jwt;
     this.rentalRepository = rentalRepository;
     this.businessRepository = businessRepository;
     this.experienceRepository = experienceRepository;
+    this.imageRepository = imageRepository;
     this.userRepository = userRepository;
     this.reservationRepository = reservationRepository;
     this.reviewRepository = reviewRepository;
@@ -278,6 +283,71 @@ public class TouristService {
       logger.error("Error creating review: {}", e.getMessage(), e);
       return false;
     }
+  }
+
+  public List<RentalResponse> getUserReservations(String token, boolean upcoming) {
+    if (!isValidTouristToken(token)) {
+      logger.warn("Invalid token for getUserReservations");
+      return null;
+    }
+
+    UUID userId = jwt.getUserId(token);
+    LocalDate today = LocalDate.now();
+
+    List<Reservation> reservations;
+    if (upcoming) {
+      reservations = reservationRepository.findByUserIdAndEndDateAfter(userId, today);
+    } else {
+      reservations = reservationRepository.findByUserIdAndEndDateBefore(userId, today);
+    }
+
+    List<Rental> rentals = reservations.stream()
+        .map(Reservation::getRental)
+        .distinct()
+        .toList();
+
+    return rentals.stream()
+        .map(this::toRentalResponse)
+        .toList();
+  }
+
+  private RentalResponse toRentalResponse(Rental rental) {
+    List<ImageInfo> images = imageRepository.findByRentalId(rental.getId()).stream()
+        .map(img -> new ImageInfo(img.getId(), img.getExtension()))
+        .toList();
+
+    double reviewAverage = calculateReviewAverage(rental.getId());
+
+    return new RentalResponse(
+        rental.getId(),
+        rental.getName(),
+        rental.getDescription(),
+        rental.getContact(),
+        rental.getSize(),
+        rental.getPeopleQuantity(),
+        rental.getRooms(),
+        rental.getBathrooms(),
+        rental.getCity(),
+        rental.getCountry(),
+        rental.getLocation(),
+        rental.getValueNight(),
+        rental.isEnable(),
+        reviewAverage,
+        images);
+  }
+
+  private double calculateReviewAverage(UUID rentalId) {
+    List<Review> reviews = reviewRepository.findByRentalId(rentalId);
+    if (reviews.isEmpty()) {
+      return 0.0;
+    }
+
+    double sum = reviews.stream()
+        .mapToInt(Review::getQualification)
+        .sum();
+
+    double average = sum / reviews.size();
+    return Math.round(average * 10.0) / 10.0;
   }
 
 }

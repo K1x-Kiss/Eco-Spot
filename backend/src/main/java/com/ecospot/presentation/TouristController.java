@@ -17,6 +17,8 @@ import com.ecospot.business.dato.CreateReviewRequest;
 import com.ecospot.business.dato.ItemCategory;
 import com.ecospot.business.dato.ItemsResponse;
 
+import com.ecospot.business.dato.RentalResponse;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -27,6 +29,21 @@ public class TouristController {
 
   public TouristController(TouristService touristService) {
     this.touristService = touristService;
+  }
+
+  @GetMapping("/reservations")
+  public ResponseEntity<List<RentalResponse>> getUserReservations(
+      @RequestHeader("Authorization") String authorizationHeader,
+      @RequestParam(value = "upcoming", defaultValue = "true") boolean upcoming) {
+
+    String token = authorizationHeader.replace("Bearer ", "");
+    List<RentalResponse> reservations = touristService.getUserReservations(token, upcoming);
+
+    if (reservations == null) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
+
+    return ResponseEntity.ok(reservations);
   }
 
   @GetMapping("/items")
