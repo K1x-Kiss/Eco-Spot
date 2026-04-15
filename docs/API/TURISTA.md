@@ -1,5 +1,38 @@
 # Documentación del Turista
 
+## Cancelar Reserva
+
+Cancela una reservación existente. Solo el turistas que hizo la reservación puede cancelarla.
+
+**URL:** `PATCH /api/v1/host/reservations/{reservationId}/cancel`
+
+**Encabezados:**
+| Campo | Valor |
+|-------|-------|
+| Authorization | Bearer {TOKEN_JWT} |
+
+**Parámetros de ruta:**
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| reservationId | UUID | ID de la reservación |
+
+**Respuestas:**
+- **200 OK:** Reservación cancelada exitosamente
+- **400 Bad Request:** Encabezado Authorization faltante
+- **403 Forbidden:** No autorizado o reservación ya cancelada
+
+**Ejemplo de solicitud:**
+```bash
+curl -X PATCH "http://localhost:8080/api/v1/host/reservations/550e8400-e29b-41d4-a716-446655440000/cancel" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+**Notas:**
+- Solo el turista que hizo la reservación puede cancelarla
+- El host del rental o un ADMIN también pueden cancelar la reservación
+- No se puede cancelar una reservación que ya está cancelada
+- Las reservaciones canceladas no aparecen en las listas de reservaciones
+
 ## Obtener Elementos por Ubicación
 
 Obtiene todos los elementos (rentals, negocios y experiencias) filtrados por la ciudad y país del usuario autenticado.

@@ -1,14 +1,18 @@
 package com.ecospot.presentation;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,7 +28,10 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import com.ecospot.business.dato.Roles;
+import com.ecospot.persistance.entity.Rental;
+import com.ecospot.persistance.entity.Reservation;
 import com.ecospot.persistance.entity.User;
+import com.ecospot.persistance.repository.ReservationRepository;
 import com.ecospot.persistance.repository.UserRepository;
 import com.ecospot.persistance.repository.RentalRepository;
 import com.ecospot.util.JWT;
@@ -52,6 +59,9 @@ public class RentalControllerTest {
   private RentalRepository rentalRepository;
 
   @Autowired
+  private ReservationRepository reservationRepository;
+
+  @Autowired
   private JWT jwt;
 
   @Autowired
@@ -66,6 +76,7 @@ public class RentalControllerTest {
   @BeforeEach
   void setUp() {
     mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+    reservationRepository.deleteAll();
     rentalRepository.deleteAll();
     userRepository.deleteAll();
 
@@ -514,6 +525,262 @@ public class RentalControllerTest {
     String nonExistentId = UUID.randomUUID().toString();
 
     mockMvc.perform(delete("/api/v1/host/rentals/" + nonExistentId)
+        .header("Authorization", "Bearer " + hostToken))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void deleteRental_withFutureReservation_returns409() throws Exception {
+    String rentalId = createRentalAndGetId(hostToken);
+    Rental rental = rentalRepository.findById(UUID.fromString(rentalId)).get();
+
+    Reservation reservation = new Reservation(
+        hostUser,
+        rental,
+        LocalDateTime.now().plusDays(1),
+        LocalDateTime.now().plusDays(3));
+    reservationRepository.save(reservation);
+
+    mockMvc.perform(delete("/api/v1/host/rentals/" + rentalId)
+        .header("Authorization", "Bearer " + hostToken))
+        .andExpect(status().isConflict());
+  }
+
+  @Test
+  void getRentals_withValidHostToken_returnsEnabledRentals() throws Exception {
+    createRentalAndGetId(hostToken);
+
+    mockMvc.perform(get("/api/v1/host/rentals")
+        .header("Authorization", "Bearer " + hostToken))
+        .andExpect(status().isOk())
+        .andExpect(content().contentTypeCompatibleWith("application/json"));
+  }
+
+  @Test
+  void getRentals_withoutAuthorization_returns400() throws Exception {
+    mockMvc.perform(get("/api/v1/host/rentals"))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void getRentals_withIncludeDisabled_returnsAllRentals() throws Exception {
+    createRentalAndGetId(hostToken);
+
+    mockMvc.perform(get("/api/v1/host/rentals")
+        .param("includeDisabled", "true")
+        .header("Authorization", "Bearer " + hostToken))
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  void getRentals_withInvalidToken_returnsEmptyList() throws Exception {
+    mockMvc.perform(get("/api/v1/host/rentals")
+        .header("Authorization", "Bearer invalid-token"))
+        .andExpect(status().isOk())
+        .andExpect(content().json("[]"));
+  }
+
+  @Test
+  void setRentalEnabled_withValidHostTokenAndOwnership_enablesRental() throws Exception {
+    String rentalId = createRentalAndGetId(hostToken);
+
+    mockMvc.perform(patch("/api/v1/host/rentals/" + rentalId + "/enable")
+        .param("enabled", "true")
+        .header("Authorization", "Bearer " + hostToken))
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  void setRentalEnabled_withValidHostToken_disablesRental() throws Exception {
+    String rentalId = createRentalAndGetId(hostToken);
+
+    mockMvc.perform(patch("/api/v1/host/rentals/" + rentalId + "/enable")
+        .param("enabled", "false")
+        .header("Authorization", "Bearer " + hostToken))
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  void setRentalEnabled_withoutAuthorization_returns400() throws Exception {
+    String rentalId = createRentalAndGetId(hostToken);
+
+    mockMvc.perform(patch("/api/v1/host/rentals/" + rentalId + "/enable")
+        .param("enabled", "true"))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void setRentalEnabled_withInvalidToken_returns403() throws Exception {
+    String rentalId = createRentalAndGetId(hostToken);
+
+    mockMvc.perform(patch("/api/v1/host/rentals/" + rentalId + "/enable")
+        .param("enabled", "true")
+        .header("Authorization", "Bearer invalid-token"))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void setRentalEnabled_withTouristToken_returns403() throws Exception {
+    String rentalId = createRentalAndGetId(hostToken);
+
+    mockMvc.perform(patch("/api/v1/host/rentals/" + rentalId + "/enable")
+        .param("enabled", "true")
+        .header("Authorization", "Bearer " + touristToken))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void setRentalEnabled_withHostTokenButNotOwner_returns403() throws Exception {
+    String rentalId = createRentalAndGetId(hostToken);
+
+    User otherHost = new User("Other", "Host", "other@example.com", passwordEncoder.encode("password123"),
+        "Madrid", "ESPAÑA", Roles.HOST);
+    otherHost = userRepository.save(otherHost);
+    String otherHostToken = jwt.generateToken(otherHost.getId(), "HOST");
+
+    mockMvc.perform(patch("/api/v1/host/rentals/" + rentalId + "/enable")
+        .param("enabled", "true")
+        .header("Authorization", "Bearer " + otherHostToken))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void getReservations_withValidHostTokenAndOwnership_returnsUpcoming() throws Exception {
+    String rentalId = createRentalAndGetId(hostToken);
+
+    mockMvc.perform(get("/api/v1/host/rentals/" + rentalId + "/reservations")
+        .param("upcoming", "true")
+        .header("Authorization", "Bearer " + hostToken))
+        .andExpect(status().isOk())
+        .andExpect(content().contentTypeCompatibleWith("application/json"));
+  }
+
+  @Test
+  void getReservations_withoutAuthorization_returns400() throws Exception {
+    String rentalId = createRentalAndGetId(hostToken);
+
+    mockMvc.perform(get("/api/v1/host/rentals/" + rentalId + "/reservations")
+        .param("upcoming", "true"))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void getReservations_withInvalidToken_returns403() throws Exception {
+    String rentalId = createRentalAndGetId(hostToken);
+
+    mockMvc.perform(get("/api/v1/host/rentals/" + rentalId + "/reservations")
+        .param("upcoming", "true")
+        .header("Authorization", "Bearer invalid-token"))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void getReservations_withTouristToken_returns403() throws Exception {
+    String rentalId = createRentalAndGetId(hostToken);
+
+    mockMvc.perform(get("/api/v1/host/rentals/" + rentalId + "/reservations")
+        .param("upcoming", "true")
+        .header("Authorization", "Bearer " + touristToken))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void getReservations_withHostTokenButNotOwner_returns403() throws Exception {
+    String rentalId = createRentalAndGetId(hostToken);
+
+    User otherHost = new User("Other", "Host", "other@example.com", passwordEncoder.encode("password123"),
+        "Madrid", "ESPAÑA", Roles.HOST);
+    otherHost = userRepository.save(otherHost);
+    String otherHostToken = jwt.generateToken(otherHost.getId(), "HOST");
+
+    mockMvc.perform(get("/api/v1/host/rentals/" + rentalId + "/reservations")
+        .param("upcoming", "true")
+        .header("Authorization", "Bearer " + otherHostToken))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void getReservations_withPassed_returnsPassedReservations() throws Exception {
+    String rentalId = createRentalAndGetId(hostToken);
+
+    mockMvc.perform(get("/api/v1/host/rentals/" + rentalId + "/reservations")
+        .param("upcoming", "false")
+        .header("Authorization", "Bearer " + hostToken))
+        .andExpect(status().isOk());
+  }
+
+  private String createReservationAndGetId(String hostToken) throws Exception {
+    String rentalId = createRentalAndGetId(hostToken);
+    Rental rental = rentalRepository.findById(UUID.fromString(rentalId)).get();
+
+    Reservation reservation = new Reservation(
+        touristUser,
+        rental,
+        LocalDateTime.now().plusDays(1),
+        LocalDateTime.now().plusDays(3));
+    reservationRepository.save(reservation);
+
+    return reservation.getId().toString();
+  }
+
+  @Test
+  void cancelReservation_withValidHostTokenAndOwnership_cancelsReservation() throws Exception {
+    String reservationId = createReservationAndGetId(hostToken);
+
+    mockMvc.perform(patch("/api/v1/host/reservations/" + reservationId + "/cancel")
+        .header("Authorization", "Bearer " + hostToken))
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  void cancelReservation_withReservationOwnerTourist_cancelsReservation() throws Exception {
+    String reservationId = createReservationAndGetId(hostToken);
+
+    mockMvc.perform(patch("/api/v1/host/reservations/" + reservationId + "/cancel")
+        .header("Authorization", "Bearer " + touristToken))
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  void cancelReservation_withoutAuthorization_returns400() throws Exception {
+    String reservationId = createReservationAndGetId(hostToken);
+
+    mockMvc.perform(patch("/api/v1/host/reservations/" + reservationId + "/cancel"))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void cancelReservation_withInvalidToken_returns403() throws Exception {
+    String reservationId = createReservationAndGetId(hostToken);
+
+    mockMvc.perform(patch("/api/v1/host/reservations/" + reservationId + "/cancel")
+        .header("Authorization", "Bearer invalid-token"))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void cancelReservation_withOtherHost_returns403() throws Exception {
+    String reservationId = createReservationAndGetId(hostToken);
+
+    User otherHost = new User("Other", "Host", "other@example.com", passwordEncoder.encode("password123"),
+        "Madrid", "ESPAÑA", Roles.HOST);
+    otherHost = userRepository.save(otherHost);
+    String otherHostToken = jwt.generateToken(otherHost.getId(), "HOST");
+
+    mockMvc.perform(patch("/api/v1/host/reservations/" + reservationId + "/cancel")
+        .header("Authorization", "Bearer " + otherHostToken))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void cancelReservation_withAlreadyCancelled_returns403() throws Exception {
+    String reservationId = createReservationAndGetId(hostToken);
+
+    mockMvc.perform(patch("/api/v1/host/reservations/" + reservationId + "/cancel")
+        .header("Authorization", "Bearer " + hostToken))
+        .andExpect(status().isOk());
+
+    mockMvc.perform(patch("/api/v1/host/reservations/" + reservationId + "/cancel")
         .header("Authorization", "Bearer " + hostToken))
         .andExpect(status().isForbidden());
   }

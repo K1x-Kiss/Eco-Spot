@@ -11,12 +11,22 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.ecospot.business.dato.CreateRentalRequest;
+import com.ecospot.business.dato.RentalResponse;
+import com.ecospot.business.dato.RentalResponse.ImageInfo;
+import com.ecospot.business.dato.ReservationResponse;
 import com.ecospot.business.dato.UpdateRentalRequest;
+import java.time.LocalDateTime;
+
 import com.ecospot.persistance.entity.Image;
 import com.ecospot.persistance.entity.Rental;
+import com.ecospot.persistance.entity.Reservation;
+import com.ecospot.persistance.entity.Review;
 import com.ecospot.persistance.entity.User;
 import com.ecospot.persistance.repository.ImageRepository;
 import com.ecospot.persistance.repository.RentalRepository;
+import com.ecospot.persistance.repository.ReservationRepository;
+import com.ecospot.persistance.repository.ReviewRepository;
+import com.ecospot.persistance.repository.ReservationRepository;
 import com.ecospot.persistance.repository.UserRepository;
 import com.ecospot.util.ImageStorage;
 import com.ecospot.util.ImageStorage.SavedImage;
@@ -31,14 +41,19 @@ public class RentalService {
   private final RentalRepository rentalRepository;
   private final ImageRepository imageRepository;
   private final ImageStorage imageStorage;
+  private final ReservationRepository reservationRepository;
+  private final ReviewRepository reviewRepository;
 
   public RentalService(JWT jwt, UserRepository userRepository, RentalRepository rentalRepository,
-      ImageRepository imageRepository, ImageStorage imageStorage) {
+      ImageRepository imageRepository, ImageStorage imageStorage, 
+      ReservationRepository reservationRepository, ReviewRepository reviewRepository) {
     this.jwt = jwt;
     this.userRepository = userRepository;
     this.rentalRepository = rentalRepository;
     this.imageRepository = imageRepository;
     this.imageStorage = imageStorage;
+    this.reservationRepository = reservationRepository;
+    this.reviewRepository = reviewRepository;
   }
 
   private boolean isValidHostToken(String token) {
@@ -229,6 +244,65 @@ public class RentalService {
     }
   }
 
+  public List<RentalResponse> getRentalsByToken(String token, boolean includeDisabled) {
+    if (!jwt.validateToken(token)) {
+      logger.warn("Invalid token for getRentalsByToken");
+      return List.of();
+    }
+
+    UUID userId = jwt.getUserId(token);
+    List<Rental> rentals = rentalRepository.findByUserId(userId);
+
+    if (!includeDisabled) {
+      rentals = rentals.stream()
+          .filter(Rental::isEnable)
+          .toList();
+    }
+
+    return rentals.stream()
+        .map(this::toRentalResponse)
+        .toList();
+  }
+
+  private RentalResponse toRentalResponse(Rental rental) {
+    List<ImageInfo> images = imageRepository.findByRentalId(rental.getId()).stream()
+        .map(img -> new ImageInfo(img.getId(), img.getExtension()))
+        .toList();
+
+    double reviewAverage = calculateReviewAverage(rental.getId());
+
+    return new RentalResponse(
+        rental.getId(),
+        rental.getName(),
+        rental.getDescription(),
+        rental.getContact(),
+        rental.getSize(),
+        rental.getPeopleQuantity(),
+        rental.getRooms(),
+        rental.getBathrooms(),
+        rental.getCity(),
+        rental.getCountry(),
+        rental.getLocation(),
+        rental.getValueNight(),
+        rental.isEnable(),
+        reviewAverage,
+        images);
+  }
+
+  private double calculateReviewAverage(UUID rentalId) {
+    List<Review> reviews = reviewRepository.findByRentalId(rentalId);
+    if (reviews.isEmpty()) {
+      return 0.0;
+    }
+
+    double sum = reviews.stream()
+        .mapToInt(Review::getQualification)
+        .sum();
+
+    double average = sum / reviews.size();
+    return Math.round(average * 10.0) / 10.0;
+  }
+
   public boolean deleteRental(String token, UUID rentalId) {
     if (!isValidHostOrAdminToken(token)) {
       logger.warn("Invalid token for deleteRental");
@@ -253,6 +327,13 @@ public class RentalService {
       return false;
     }
 
+    List<Reservation> futureReservations = reservationRepository.findByRentalIdAndStartingDateAfterAndIsCancelledFalse(
+        rentalId, LocalDateTime.now());
+    if (!futureReservations.isEmpty()) {
+      logger.warn("Cannot delete rental {} - has {} future reservation(s)", rentalId, futureReservations.size());
+      return false;
+    }
+
     try {
       List<Image> existingImages = imageRepository.findByRentalId(rentalId);
       for (Image img : existingImages) {
@@ -266,6 +347,162 @@ public class RentalService {
 
     } catch (Exception e) {
       logger.error("Error deleting rental: {}", e.getMessage(), e);
+      return false;
+    }
+  }
+
+  public boolean setRentalEnabled(String token, UUID rentalId, boolean enabled) {
+    if (!isValidHostOrAdminToken(token)) {
+      logger.warn("Invalid token for setRentalEnabled");
+      return false;
+    }
+
+    UUID userId = jwt.getUserId(token);
+    Optional<Rental> rentalOpt = rentalRepository.findById(rentalId);
+    if (rentalOpt.isEmpty()) {
+      logger.warn("Rental not found: {}", rentalId);
+      return false;
+    }
+
+    Rental rental = rentalOpt.get();
+    String userRole = jwt.getRol(token);
+
+    boolean isOwner = rental.getUser().getId().equals(userId);
+    boolean isAdmin = "ADMIN".equals(userRole);
+
+    if (!isOwner && !isAdmin) {
+      logger.warn("User {} is not authorized to set rental {} enabled status", userId, rentalId);
+      return false;
+    }
+
+    try {
+      rental.setEnable(enabled);
+      rentalRepository.save(rental);
+
+      if (enabled) {
+        logger.info("Rental enabled successfully: {}", rentalId);
+      } else {
+        logger.info("Rental disabled successfully: {}", rentalId);
+      }
+      return true;
+
+    } catch (Exception e) {
+      logger.error("Error setting rental enabled status: {}", e.getMessage(), e);
+      return false;
+    }
+  }
+
+  public boolean hasFutureReservations(String token, UUID rentalId) {
+    if (!jwt.validateToken(token)) {
+      return false;
+    }
+
+    Optional<Rental> rentalOpt = rentalRepository.findById(rentalId);
+    if (rentalOpt.isEmpty()) {
+      return false;
+    }
+
+    UUID userId = jwt.getUserId(token);
+    Rental rental = rentalOpt.get();
+    String userRole = jwt.getRol(token);
+
+    boolean isOwner = rental.getUser().getId().equals(userId);
+    boolean isAdmin = "ADMIN".equals(userRole);
+
+    if (!isOwner && !isAdmin) {
+      return false;
+    }
+
+    List<Reservation> futureReservations = reservationRepository.findByRentalIdAndStartingDateAfterAndIsCancelledFalse(
+        rentalId, LocalDateTime.now());
+    return !futureReservations.isEmpty();
+  }
+
+  public List<ReservationResponse> getReservationsByRental(String token, UUID rentalId, boolean upcoming) {
+    if (!isValidHostOrAdminToken(token)) {
+      logger.warn("Invalid token for getReservationsByRental");
+      return null;
+    }
+
+    Optional<Rental> rentalOpt = rentalRepository.findById(rentalId);
+    if (rentalOpt.isEmpty()) {
+      logger.warn("Rental not found: {}", rentalId);
+      return null;
+    }
+
+    Rental rental = rentalOpt.get();
+    UUID userId = jwt.getUserId(token);
+    String userRole = jwt.getRol(token);
+
+    boolean isOwner = rental.getUser().getId().equals(userId);
+    boolean isAdmin = "ADMIN".equals(userRole);
+
+    if (!isOwner && !isAdmin) {
+      logger.warn("User {} is not authorized to view reservations for rental {}", userId, rentalId);
+      return null;
+    }
+
+    List<Reservation> reservations;
+    if (upcoming) {
+      reservations = reservationRepository.findByRentalIdAndStartingDateAfterAndIsCancelledFalse(
+          rentalId, LocalDateTime.now());
+    } else {
+      reservations = reservationRepository.findByRentalIdAndStartingDateBeforeAndIsCancelledFalse(
+          rentalId, LocalDateTime.now());
+    }
+
+    return reservations.stream()
+        .map(res -> new ReservationResponse(
+            res.getId(),
+            res.getRental().getId(),
+            res.getRental().getName(),
+            res.getUser().getName(),
+            res.getUser().getSurname(),
+            res.getStartingDate(),
+            res.getEndDate(),
+            res.isCancelled()))
+        .toList();
+  }
+
+  public boolean cancelReservation(String token, UUID reservationId) {
+    if (!jwt.validateToken(token)) {
+      logger.warn("Invalid token for cancelReservation");
+      return false;
+    }
+
+    Optional<Reservation> reservationOpt = reservationRepository.findById(reservationId);
+    if (reservationOpt.isEmpty()) {
+      logger.warn("Reservation not found: {}", reservationId);
+      return false;
+    }
+
+    Reservation reservation = reservationOpt.get();
+    UUID userId = jwt.getUserId(token);
+    String userRole = jwt.getRol(token);
+
+    User rentalOwner = reservation.getRental().getUser();
+    boolean isRentalOwner = rentalOwner.getId().equals(userId);
+    boolean isAdmin = "ADMIN".equals(userRole);
+    boolean isReservationOwner = reservation.getUser().getId().equals(userId);
+
+    if (!isRentalOwner && !isAdmin && !isReservationOwner) {
+      logger.warn("User {} is not authorized to cancel reservation {}", userId, reservationId);
+      return false;
+    }
+
+    if (reservation.isCancelled()) {
+      logger.warn("Reservation {} is already cancelled", reservationId);
+      return false;
+    }
+
+    try {
+      reservation.setCancelled(true);
+      reservationRepository.save(reservation);
+      logger.info("Reservation cancelled successfully: {}", reservationId);
+      return true;
+
+    } catch (Exception e) {
+      logger.error("Error cancelling reservation: {}", e.getMessage(), e);
       return false;
     }
   }

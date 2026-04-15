@@ -35,6 +35,9 @@ public class Reservation {
   @Column(name = "end_date", nullable = false)
   private LocalDateTime endDate;
 
+  @Column(name = "is_cancelled", nullable = false)
+  private boolean isCancelled = false;
+
   public Reservation() {
   }
 
@@ -91,6 +94,14 @@ public class Reservation {
 
   public void setEndDate(LocalDateTime endDate) {
     this.endDate = endDate;
+  }
+
+  public boolean isCancelled() {
+    return isCancelled;
+  }
+
+  public void setCancelled(boolean isCancelled) {
+    this.isCancelled = isCancelled;
   }
 
 }

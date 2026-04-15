@@ -16,4 +16,6 @@ public interface RentalRepository extends JpaRepository<Rental, UUID> {
 
   List<Rental> findByNameContainingIgnoreCase(String name);
 
+  List<Rental> findByUserId(UUID userId);
+
 }
