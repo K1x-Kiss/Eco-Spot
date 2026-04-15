@@ -68,6 +68,9 @@ public class Rental {
   @OneToMany(mappedBy = "rental", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<Image> images = new ArrayList<>();
 
+  @OneToMany(mappedBy = "rental", cascade = CascadeType.ALL, orphanRemoval = true)
+  private List<Review> reviews = new ArrayList<>();
+
   public Rental() {
   }
 
@@ -214,6 +217,14 @@ public class Rental {
 
   public void setImages(List<Image> images) {
     this.images = images;
+  }
+
+  public List<Review> getReviews() {
+    return reviews;
+  }
+
+  public void setReviews(List<Review> reviews) {
+    this.reviews = reviews;
   }
 
 }

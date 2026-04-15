@@ -4,6 +4,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.LocalDate;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,6 +19,8 @@ import org.springframework.web.context.WebApplicationContext;
 
 import com.ecospot.business.dato.Roles;
 import com.ecospot.persistance.entity.Rental;
+import com.ecospot.persistance.entity.Reservation;
+import com.ecospot.persistance.entity.Review;
 import com.ecospot.persistance.entity.User;
 import com.ecospot.persistance.repository.ReservationRepository;
 import com.ecospot.persistance.repository.UserRepository;
@@ -261,4 +265,82 @@ public class TouristControllerTest {
             """))
         .andExpect(status().isForbidden());
   }
+
+  @Test
+  void createReview_withValidData_returnsCreated() throws Exception {
+    Rental rental = rentalRepository.findAll().get(0);
+
+    Reservation reservation = new Reservation(
+        testUser,
+        rental,
+        LocalDate.now().minusDays(5),
+        LocalDate.now().minusDays(2));
+    reservationRepository.save(reservation);
+
+    mockMvc.perform(post("/api/v1/tourist/rentals/" + rental.getId() + "/reviews")
+        .header("Authorization", "Bearer " + validToken)
+        .contentType(MediaType.APPLICATION_JSON)
+        .content("""
+            {
+              "qualification": 5,
+              "opinion": "Great stay!"
+            }
+            """))
+        .andExpect(status().isCreated());
+  }
+
+  @Test
+  void createReview_withoutPastReservation_returns403() throws Exception {
+    Rental rental = rentalRepository.findAll().get(0);
+
+    mockMvc.perform(post("/api/v1/tourist/rentals/" + rental.getId() + "/reviews")
+        .header("Authorization", "Bearer " + validToken)
+        .contentType(MediaType.APPLICATION_JSON)
+        .content("""
+            {
+              "qualification": 5,
+              "opinion": "Great stay!"
+            }
+            """))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void createReview_withoutAuthorization_returns400() throws Exception {
+    Rental rental = rentalRepository.findAll().get(0);
+
+    mockMvc.perform(post("/api/v1/tourist/rentals/" + rental.getId() + "/reviews")
+        .contentType(MediaType.APPLICATION_JSON)
+        .content("""
+            {
+              "qualification": 5,
+              "opinion": "Great stay!"
+            }
+            """))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void createReview_withInvalidQualification_returns403() throws Exception {
+    Rental rental = rentalRepository.findAll().get(0);
+
+    Reservation reservation = new Reservation(
+        testUser,
+        rental,
+        LocalDate.now().minusDays(5),
+        LocalDate.now().minusDays(2));
+    reservationRepository.save(reservation);
+
+    mockMvc.perform(post("/api/v1/tourist/rentals/" + rental.getId() + "/reviews")
+        .header("Authorization", "Bearer " + validToken)
+        .contentType(MediaType.APPLICATION_JSON)
+        .content("""
+            {
+              "qualification": 6,
+              "opinion": "Great stay!"
+            }
+            """))
+        .andExpect(status().isForbidden());
+  }
+
 }

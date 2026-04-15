@@ -11,20 +11,22 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 import com.ecospot.business.dato.CreateReservationRequest;
+import com.ecospot.business.dato.CreateReviewRequest;
 import com.ecospot.business.dato.ItemCategory;
 import com.ecospot.business.dato.ItemsResponse;
 import com.ecospot.persistance.entity.Business;
 import com.ecospot.persistance.entity.Experience;
 import com.ecospot.persistance.entity.Rental;
 import com.ecospot.persistance.entity.Reservation;
+import com.ecospot.persistance.entity.Review;
 import com.ecospot.persistance.entity.User;
 import com.ecospot.persistance.repository.BusinessRepository;
 import com.ecospot.persistance.repository.ExperienceRepository;
 import com.ecospot.persistance.repository.RentalRepository;
 import com.ecospot.persistance.repository.ReservationRepository;
+import com.ecospot.persistance.repository.ReviewRepository;
 import com.ecospot.persistance.repository.UserRepository;
 import com.ecospot.util.JWT;
 
@@ -38,16 +40,18 @@ public class TouristService {
   private final ExperienceRepository experienceRepository;
   private final UserRepository userRepository;
   private final ReservationRepository reservationRepository;
+  private final ReviewRepository reviewRepository;
 
   public TouristService(JWT jwt, RentalRepository rentalRepository, BusinessRepository businessRepository,
       ExperienceRepository experienceRepository, UserRepository userRepository,
-      ReservationRepository reservationRepository) {
+      ReservationRepository reservationRepository, ReviewRepository reviewRepository) {
     this.jwt = jwt;
     this.rentalRepository = rentalRepository;
     this.businessRepository = businessRepository;
     this.experienceRepository = experienceRepository;
     this.userRepository = userRepository;
     this.reservationRepository = reservationRepository;
+    this.reviewRepository = reviewRepository;
   }
 
   private boolean isValidTouristToken(String token) {
@@ -220,9 +224,60 @@ public class TouristService {
     }
   }
 
-  private boolean datesOverlap(LocalDate newStart, LocalDate newEnd, 
+  private boolean datesOverlap(LocalDate newStart, LocalDate newEnd,
       LocalDate existingStart, LocalDate existingEnd) {
     return !newEnd.isBefore(existingStart) && !newStart.isAfter(existingEnd);
+  }
+
+  public boolean createReview(String token, UUID rentalId, CreateReviewRequest request) {
+    if (!isValidTouristToken(token)) {
+      logger.warn("Invalid token for createReview");
+      return false;
+    }
+
+    UUID userId = jwt.getUserId(token);
+    Optional<User> userOpt = userRepository.findById(userId);
+    if (userOpt.isEmpty()) {
+      logger.warn("User not found: {}", userId);
+      return false;
+    }
+
+    Optional<Rental> rentalOpt = rentalRepository.findById(rentalId);
+    if (rentalOpt.isEmpty()) {
+      logger.warn("Rental not found: {}", rentalId);
+      return false;
+    }
+
+    Integer qualification = request.getQualification();
+    if (qualification == null || qualification < 1 || qualification > 5) {
+      logger.warn("Invalid qualification: {}", qualification);
+      return false;
+    }
+
+    boolean hasCompletedReservation = reservationRepository.findByRentalIdAndUserIdAndEndDateBefore(
+        rentalId, userId, LocalDate.now()).size() > 0;
+
+    if (!hasCompletedReservation) {
+      logger.warn("User {} has no completed reservation for rental {}", userId, rentalId);
+      return false;
+    }
+
+    boolean alreadyReviewed = reviewRepository.existsByRentalIdAndUserId(rentalId, userId);
+    if (alreadyReviewed) {
+      logger.warn("User {} already reviewed rental {}", userId, rentalId);
+      return false;
+    }
+
+    try {
+      Review review = new Review(userOpt.get(), rentalOpt.get(), qualification, request.getOpinion());
+      reviewRepository.save(review);
+      logger.info("Review created successfully for rental: {}", rentalId);
+      return true;
+
+    } catch (Exception e) {
+      logger.error("Error creating review: {}", e.getMessage(), e);
+      return false;
+    }
   }
 
 }

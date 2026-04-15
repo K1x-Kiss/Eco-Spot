@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.ecospot.business.service.TouristService;
 import com.ecospot.business.dato.CreateReservationRequest;
+import com.ecospot.business.dato.CreateReviewRequest;
 import com.ecospot.business.dato.ItemCategory;
 import com.ecospot.business.dato.ItemsResponse;
 
@@ -81,6 +82,22 @@ public class TouristController {
 
     String token = authorizationHeader.replace("Bearer ", "");
     boolean created = touristService.createReservation(token, rentalId, request);
+
+    if (!created) {
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+    }
+
+    return ResponseEntity.status(HttpStatus.CREATED).build();
+  }
+
+  @PostMapping("/rentals/{rentalId}/reviews")
+  public ResponseEntity<Void> createReview(
+      @RequestHeader("Authorization") String authorizationHeader,
+      @PathVariable UUID rentalId,
+      @RequestBody CreateReviewRequest request) {
+
+    String token = authorizationHeader.replace("Bearer ", "");
+    boolean created = touristService.createReview(token, rentalId, request);
 
     if (!created) {
       return ResponseEntity.status(HttpStatus.FORBIDDEN).build();

@@ -41,6 +41,46 @@ curl -X POST "http://localhost:8080/api/v1/tourist/rentals/550e8400-e29b-41d4-a7
 - No se pueden crear reservaciones con fechas que superen otras reservaciones existentes
 - El host del rental puede cancelar la reservación posteriormente
 
+## Crear Reseña
+
+Crea una reseña para un rental donde el turista ha completado una estancia.
+
+**URL:** `POST /api/v1/tourist/rentals/{rentalId}/reviews`
+
+**Encabezados:**
+| Campo | Valor |
+|-------|-------|
+| Authorization | Bearer {TOKEN_JWT} |
+
+**Parámetros de ruta:**
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| rentalId | UUID | ID del rental |
+
+**Cuerpo de la solicitud:**
+| Campo | Tipo | Obligatorio | Descripción |
+|-------|------|-------------|-------------|
+| qualification | Integer | Sí | Calificación (1-5) |
+| opinion | String | No | Opinion/opinión |
+
+**Respuestas:**
+- **201 Created:** Reseña creada exitosamente
+- **400 Bad Request:** Authorization faltante o datos inválidos
+- **403 Forbidden:** Usuario no tiene reservación pasada, ya reseñó, o calificación inválida
+
+**Ejemplo de solicitud:**
+```bash
+curl -X POST "http://localhost:8080/api/v1/tourist/rentals/550e8400-e29b-41d4-a716-446655440000/reviews" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -H "Content-Type: application/json" \
+  -d '{"qualification": 5, "opinion": "Great stay!"}'
+```
+
+**Notas:**
+- El turista debe haber completado una estancia (reservación pasada) en el rental
+- Solo se puede reseñar una vez por rental
+- La calificación debe ser entre 1 y 5
+
 ## Cancelar Reserva
 
 Cancela una reservación existente. Solo el turistas que hizo la reservación puede cancelarla.

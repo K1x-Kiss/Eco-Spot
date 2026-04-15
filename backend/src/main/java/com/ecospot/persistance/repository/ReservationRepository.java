@@ -22,4 +22,8 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID> 
 
   List<Reservation> findByRentalIdAndIsCancelledFalse(UUID rentalId);
 
+  List<Reservation> findByRentalIdAndUserIdAndEndDateBefore(UUID rentalId, UUID userId, LocalDate date);
+
+  boolean existsByRentalIdAndUserId(UUID rentalId, UUID userId);
+
 }
