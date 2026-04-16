@@ -4,5 +4,6 @@ public enum Roles {
   TOURIST,
   HOST,
   BUSINESS,
+  EXPERIENCE,
   ADMINISTRATOR,
 }

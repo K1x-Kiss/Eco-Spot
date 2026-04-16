@@ -21,4 +21,5 @@ Es una aplicacion para telefonos en busca de conectar personas que buscan nuevas
 | TURISTA | Endpoints para turistas (busqueda, reservas, reseñas) | [Ver](./docs/API/TURISTA.md) |
 | HOSTALES | Endpoints para hosts (gestion de rentals) | [Ver](./docs/API/HOSTALES.md) |
 | NEGOCIOS | Endpoints para hosts (gestion de negocios) | [Ver](./docs/API/NEGOCIOS.md) |
+| EXPERIENCIAS | Endpoints para hosts (gestion de experiencias) | [Ver](./docs/API/EXPERIENCIAS.md) |
 | USER | Endpoints de perfil de usuario y ubicacion | [Ver](./docs/API/USER.md) |

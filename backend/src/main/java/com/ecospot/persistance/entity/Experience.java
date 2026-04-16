@@ -1,5 +1,6 @@
 package com.ecospot.persistance.entity;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,10 +34,10 @@ public class Experience {
   private boolean isEnable = true;
 
   @Column(name = "starting_date", nullable = false)
-  private LocalDateTime startingDate;
+  private LocalDate startingDate;
 
   @Column(name = "end_date", nullable = false)
-  private LocalDateTime endDate;
+  private LocalDate endDate;
 
   @Column(name = "name", nullable = false, length = 100)
   private String name = "";
@@ -65,7 +66,7 @@ public class Experience {
   public Experience() {
   }
 
-  public Experience(User user, LocalDateTime startingDate, LocalDateTime endDate, String name,
+  public Experience(User user, LocalDate startingDate, LocalDate endDate, String name,
       String description, String contact, String city, String country, String location, Double price) {
     this.user = user;
     this.startingDate = startingDate;
@@ -111,19 +112,19 @@ public class Experience {
     this.isEnable = isEnable;
   }
 
-  public LocalDateTime getStartingDate() {
+  public LocalDate getStartingDate() {
     return startingDate;
   }
 
-  public void setStartingDate(LocalDateTime startingDate) {
+  public void setStartingDate(LocalDate startingDate) {
     this.startingDate = startingDate;
   }
 
-  public LocalDateTime getEndDate() {
+  public LocalDate getEndDate() {
     return endDate;
   }
 
-  public void setEndDate(LocalDateTime endDate) {
+  public void setEndDate(LocalDate endDate) {
     this.endDate = endDate;
   }
 

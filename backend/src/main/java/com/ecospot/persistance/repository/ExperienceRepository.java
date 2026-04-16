@@ -16,4 +16,6 @@ public interface ExperienceRepository extends JpaRepository<Experience, UUID> {
 
   List<Experience> findByNameContainingIgnoreCase(String name);
 
+  List<Experience> findByUserId(UUID userId);
+
 }

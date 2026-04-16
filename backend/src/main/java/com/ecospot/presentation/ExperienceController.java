@@ -15,44 +15,47 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.ecospot.business.dato.BusinessResponse;
-import com.ecospot.business.dato.CreateBusinessRequest;
-import com.ecospot.business.service.BusinessService;
+import com.ecospot.business.dato.CreateExperienceRequest;
+import com.ecospot.business.dato.ExperienceResponse;
+import com.ecospot.business.service.ExperienceService;
 
 import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/businesses")
-public class BusinessController {
+@RequestMapping("/api/v1")
+public class ExperienceController {
 
-  private final BusinessService businessService;
+  private final ExperienceService experienceService;
 
-  public BusinessController(BusinessService businessService) {
-    this.businessService = businessService;
+  public ExperienceController(ExperienceService experienceService) {
+    this.experienceService = experienceService;
   }
 
-  @GetMapping()
-  public ResponseEntity<List<BusinessResponse>> getBusinesses(
+  @GetMapping("/experiences")
+  public ResponseEntity<List<ExperienceResponse>> getExperiences(
       @RequestHeader("Authorization") String authorizationHeader,
       @RequestParam(value = "includeDisabled", required = false) boolean includeDisabled) {
 
     String token = authorizationHeader.replace("Bearer ", "");
-    List<BusinessResponse> businesses = businessService.getBusinessesByToken(token, includeDisabled);
+    List<ExperienceResponse> experiences = experienceService.getExperiencesByToken(token, includeDisabled);
 
-    return ResponseEntity.ok(businesses);
+    return ResponseEntity.ok(experiences);
   }
 
-  @PostMapping()
-  public ResponseEntity<Void> createBusiness(
+  @PostMapping("/experiences")
+  public ResponseEntity<Void> createExperience(
       @RequestHeader("Authorization") String authorizationHeader,
-      @ModelAttribute CreateBusinessRequest request,
+      @ModelAttribute CreateExperienceRequest request,
       @RequestParam(value = "images", required = false) List<MultipartFile> images) {
 
     if (request.getName() == null || request.getName().isEmpty() ||
         request.getContact() == null || request.getContact().isEmpty() ||
         request.getCity() == null || request.getCity().isEmpty() ||
-        request.getCountry() == null || request.getCountry().isEmpty()) {
+        request.getCountry() == null || request.getCountry().isEmpty() ||
+        request.getPrice() == null ||
+        request.getStartingDate() == null ||
+        request.getEndDate() == null) {
       return ResponseEntity.badRequest().build();
     }
 
@@ -63,7 +66,7 @@ public class BusinessController {
     request.setImages(images);
 
     String token = authorizationHeader.replace("Bearer ", "");
-    boolean created = businessService.createBusiness(token, request);
+    boolean created = experienceService.createExperience(token, request);
 
     if (!created) {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
@@ -72,17 +75,20 @@ public class BusinessController {
     return ResponseEntity.status(HttpStatus.CREATED).build();
   }
 
-  @PutMapping("/{businessId}")
-  public ResponseEntity<Void> updateBusiness(
+  @PutMapping("/experiences/{experienceId}")
+  public ResponseEntity<Void> updateExperience(
       @RequestHeader("Authorization") String authorizationHeader,
-      @PathVariable UUID businessId,
-      @ModelAttribute CreateBusinessRequest request,
+      @PathVariable UUID experienceId,
+      @ModelAttribute CreateExperienceRequest request,
       @RequestParam(value = "images", required = false) List<MultipartFile> images) {
 
     if (request.getName() == null || request.getName().isEmpty() ||
         request.getContact() == null || request.getContact().isEmpty() ||
         request.getCity() == null || request.getCity().isEmpty() ||
-        request.getCountry() == null || request.getCountry().isEmpty()) {
+        request.getCountry() == null || request.getCountry().isEmpty() ||
+        request.getPrice() == null ||
+        request.getStartingDate() == null ||
+        request.getEndDate() == null) {
       return ResponseEntity.badRequest().build();
     }
 
@@ -93,7 +99,7 @@ public class BusinessController {
     request.setImages(images);
 
     String token = authorizationHeader.replace("Bearer ", "");
-    boolean updated = businessService.updateBusiness(token, businessId, request);
+    boolean updated = experienceService.updateExperience(token, experienceId, request);
 
     if (!updated) {
       return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
@@ -102,31 +108,31 @@ public class BusinessController {
     return ResponseEntity.ok().build();
   }
 
-  @DeleteMapping("/{businessId}")
-  public ResponseEntity<Void> deleteBusiness(
+  @PatchMapping("/experiences/{experienceId}")
+  public ResponseEntity<Void> setExperienceEnabled(
       @RequestHeader("Authorization") String authorizationHeader,
-      @PathVariable UUID businessId) {
-
-    String token = authorizationHeader.replace("Bearer ", "");
-    boolean deleted = businessService.deleteBusiness(token, businessId);
-
-    if (!deleted) {
-      return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-    }
-
-    return ResponseEntity.ok().build();
-  }
-
-  @PatchMapping("/{businessId}")
-  public ResponseEntity<Void> setBusinessEnabled(
-      @RequestHeader("Authorization") String authorizationHeader,
-      @PathVariable UUID businessId,
+      @PathVariable UUID experienceId,
       @RequestParam(value = "enabled") boolean enabled) {
 
     String token = authorizationHeader.replace("Bearer ", "");
-    boolean updated = businessService.setBusinessEnabled(token, businessId, enabled);
+    boolean updated = experienceService.setExperienceEnabled(token, experienceId, enabled);
 
     if (!updated) {
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+    }
+
+    return ResponseEntity.ok().build();
+  }
+
+  @DeleteMapping("/experiences/{experienceId}")
+  public ResponseEntity<Void> deleteExperience(
+      @RequestHeader("Authorization") String authorizationHeader,
+      @PathVariable UUID experienceId) {
+
+    String token = authorizationHeader.replace("Bearer ", "");
+    boolean deleted = experienceService.deleteExperience(token, experienceId);
+
+    if (!deleted) {
       return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
 
