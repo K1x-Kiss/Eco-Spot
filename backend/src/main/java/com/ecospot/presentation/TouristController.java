@@ -12,7 +12,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ecospot.business.service.TouristService;
+import com.ecospot.business.dato.CreatePaymentRequest;
 import com.ecospot.business.dato.CreateReservationRequest;
+import com.ecospot.business.dato.CreateReservationResponse;
 import com.ecospot.business.dato.CreateReviewRequest;
 import com.ecospot.business.dato.ItemCategory;
 import com.ecospot.business.dato.ItemsResponse;
@@ -92,19 +94,19 @@ public class TouristController {
   }
 
   @PostMapping("/rentals/{rentalId}/reservations")
-  public ResponseEntity<Void> createReservation(
+  public ResponseEntity<CreateReservationResponse> createReservation(
       @RequestHeader("Authorization") String authorizationHeader,
       @PathVariable UUID rentalId,
       @RequestBody CreateReservationRequest request) {
 
     String token = authorizationHeader.replace("Bearer ", "");
-    boolean created = touristService.createReservation(token, rentalId, request);
+    CreateReservationResponse response = touristService.createReservation(token, rentalId, request);
 
-    if (!created) {
+    if (response == null) {
       return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
 
-    return ResponseEntity.status(HttpStatus.CREATED).build();
+    return ResponseEntity.status(HttpStatus.CREATED).body(response);
   }
 
   @PostMapping("/rentals/{rentalId}/reviews")
@@ -115,6 +117,25 @@ public class TouristController {
 
     String token = authorizationHeader.replace("Bearer ", "");
     boolean created = touristService.createReview(token, rentalId, request);
+
+    if (!created) {
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+    }
+
+    return ResponseEntity.status(HttpStatus.CREATED).build();
+  }
+
+  @PostMapping("/payments")
+  public ResponseEntity<Void> createPayment(
+      @RequestHeader("Authorization") String authorizationHeader,
+      @RequestBody CreatePaymentRequest request) {
+
+    if (request.getReservationId() == null || request.getAmount() == null) {
+      return ResponseEntity.badRequest().build();
+    }
+
+    String token = authorizationHeader.replace("Bearer ", "");
+    boolean created = touristService.createPayment(token, request.getReservationId(), request.getAmount());
 
     if (!created) {
       return ResponseEntity.status(HttpStatus.FORBIDDEN).build();

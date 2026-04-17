@@ -13,13 +13,16 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 
 import com.ecospot.business.dato.CreateReservationRequest;
+import com.ecospot.business.dato.CreateReservationResponse;
 import com.ecospot.business.dato.CreateReviewRequest;
 import com.ecospot.business.dato.ItemCategory;
 import com.ecospot.business.dato.ItemsResponse;
+import com.ecospot.business.dato.PaymentStatus;
 import com.ecospot.business.dato.RentalResponse;
 import com.ecospot.business.dato.RentalResponse.ImageInfo;
 import com.ecospot.persistance.entity.Business;
 import com.ecospot.persistance.entity.Experience;
+import com.ecospot.persistance.entity.Payment;
 import com.ecospot.persistance.entity.Rental;
 import com.ecospot.persistance.entity.Reservation;
 import com.ecospot.persistance.entity.Review;
@@ -27,6 +30,7 @@ import com.ecospot.persistance.entity.User;
 import com.ecospot.persistance.repository.BusinessRepository;
 import com.ecospot.persistance.repository.ExperienceRepository;
 import com.ecospot.persistance.repository.ImageRepository;
+import com.ecospot.persistance.repository.PaymentRepository;
 import com.ecospot.persistance.repository.RentalRepository;
 import com.ecospot.persistance.repository.ReservationRepository;
 import com.ecospot.persistance.repository.ReviewRepository;
@@ -45,10 +49,12 @@ public class TouristService {
   private final UserRepository userRepository;
   private final ReservationRepository reservationRepository;
   private final ReviewRepository reviewRepository;
+  private final PaymentRepository paymentRepository;
 
   public TouristService(JWT jwt, RentalRepository rentalRepository, BusinessRepository businessRepository,
       ExperienceRepository experienceRepository, ImageRepository imageRepository, UserRepository userRepository,
-      ReservationRepository reservationRepository, ReviewRepository reviewRepository) {
+      ReservationRepository reservationRepository, ReviewRepository reviewRepository,
+      PaymentRepository paymentRepository) {
     this.jwt = jwt;
     this.rentalRepository = rentalRepository;
     this.businessRepository = businessRepository;
@@ -57,6 +63,7 @@ public class TouristService {
     this.userRepository = userRepository;
     this.reservationRepository = reservationRepository;
     this.reviewRepository = reviewRepository;
+    this.paymentRepository = paymentRepository;
   }
 
   private boolean isValidTouristToken(String token) {
@@ -172,28 +179,28 @@ public class TouristService {
     return null;
   }
 
-  public boolean createReservation(String token, UUID rentalId, CreateReservationRequest request) {
+  public CreateReservationResponse createReservation(String token, UUID rentalId, CreateReservationRequest request) {
     if (!isValidTouristToken(token)) {
       logger.warn("Invalid token for createReservation");
-      return false;
+      return null;
     }
 
     UUID userId = jwt.getUserId(token);
     Optional<User> userOpt = userRepository.findById(userId);
     if (userOpt.isEmpty()) {
       logger.warn("User not found: {}", userId);
-      return false;
+      return null;
     }
 
     Optional<Rental> rentalOpt = rentalRepository.findById(rentalId);
     if (rentalOpt.isEmpty()) {
       logger.warn("Rental not found: {}", rentalId);
-      return false;
+      return null;
     }
 
     if (!rentalOpt.get().isEnable()) {
       logger.warn("Rental {} is not enabled", rentalId);
-      return false;
+      return null;
     }
 
     LocalDate startDate = request.getStartingDate();
@@ -201,31 +208,39 @@ public class TouristService {
 
     if (startDate == null || endDate == null) {
       logger.warn("Missing dates for reservation");
-      return false;
+      return null;
     }
 
     if (startDate.isAfter(endDate) || startDate.isBefore(LocalDate.now())) {
       logger.warn("Invalid dates for reservation");
-      return false;
+      return null;
     }
 
     List<Reservation> existingReservations = reservationRepository.findByRentalIdAndIsCancelledFalse(rentalId);
     for (Reservation res : existingReservations) {
       if (datesOverlap(startDate, endDate, res.getStartingDate(), res.getEndDate())) {
         logger.warn("Dates overlap with existing reservation: {}", res.getId());
-        return false;
+        return null;
       }
     }
 
     try {
       Reservation reservation = new Reservation(userOpt.get(), rentalOpt.get(), startDate, endDate);
-      reservationRepository.save(reservation);
-      logger.info("Reservation created successfully: {}", reservation.getId());
-      return true;
+      Reservation savedReservation = reservationRepository.save(reservation);
+      
+      long nights = java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate);
+      double totalPrice = rentalOpt.get().getValueNight() * nights;
+      
+      Payment payment = new Payment(userOpt.get(), PaymentStatus.SUCCESS, totalPrice);
+      payment.setReservation(savedReservation);
+      paymentRepository.save(payment);
+      
+      logger.info("Reservation created successfully: {}", savedReservation.getId());
+      return new CreateReservationResponse(savedReservation.getId(), totalPrice);
 
     } catch (Exception e) {
       logger.error("Error creating reservation: {}", e.getMessage(), e);
-      return false;
+      return null;
     }
   }
 
@@ -348,6 +363,55 @@ public class TouristService {
 
     double average = sum / reviews.size();
     return Math.round(average * 10.0) / 10.0;
+  }
+
+  public boolean createPayment(String token, UUID reservationId, Double amount) {
+    if (!isValidTouristToken(token)) {
+      logger.warn("Invalid token for createPayment");
+      return false;
+    }
+
+    UUID userId = jwt.getUserId(token);
+    Optional<User> userOpt = userRepository.findById(userId);
+    if (userOpt.isEmpty()) {
+      logger.warn("User not found: {}", userId);
+      return false;
+    }
+
+    Optional<Reservation> reservationOpt = reservationRepository.findById(reservationId);
+    if (reservationOpt.isEmpty()) {
+      logger.warn("Reservation not found: {}", reservationId);
+      return false;
+    }
+
+    Reservation reservation = reservationOpt.get();
+
+    if (!reservation.getUser().getId().equals(userId)) {
+      logger.warn("User {} is not authorized to pay for reservation {}", userId, reservationId);
+      return false;
+    }
+
+    Rental rental = reservation.getRental();
+    long nights = java.time.temporal.ChronoUnit.DAYS.between(reservation.getStartingDate(), reservation.getEndDate());
+    double totalPrice = rental.getValueNight() * nights;
+
+    if (amount == null || Math.abs(amount - totalPrice) > 0.01) {
+      logger.warn("Invalid amount: {}. Expected: {}", amount, totalPrice);
+      return false;
+    }
+
+    try {
+      Payment payment = new Payment(userOpt.get(), PaymentStatus.SUCCESS, amount);
+      payment.setReservation(reservation);
+      paymentRepository.save(payment);
+
+      logger.info("Payment created successfully for reservation: {}", reservationId);
+      return true;
+
+    } catch (Exception e) {
+      logger.error("Error creating payment: {}", e.getMessage(), e);
+      return false;
+    }
   }
 
 }

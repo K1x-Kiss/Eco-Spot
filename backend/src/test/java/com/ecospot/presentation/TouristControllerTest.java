@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,6 +23,7 @@ import com.ecospot.persistance.entity.Rental;
 import com.ecospot.persistance.entity.Reservation;
 import com.ecospot.persistance.entity.Review;
 import com.ecospot.persistance.entity.User;
+import com.ecospot.persistance.repository.PaymentRepository;
 import com.ecospot.persistance.repository.ReservationRepository;
 import com.ecospot.persistance.repository.UserRepository;
 import com.ecospot.persistance.repository.RentalRepository;
@@ -46,6 +48,9 @@ public class TouristControllerTest {
 
   @Autowired
   private ReservationRepository reservationRepository;
+
+  @Autowired
+  private PaymentRepository paymentRepository;
 
   @Autowired
   private JWT jwt;
@@ -91,6 +96,7 @@ public class TouristControllerTest {
 
   @AfterEach
   void tearDown() {
+    paymentRepository.deleteAll();
     reservationRepository.deleteAll();
   }
 
@@ -392,6 +398,61 @@ public class TouristControllerTest {
         .header("Authorization", "Bearer invalid-token")
         .contentType(MediaType.APPLICATION_JSON))
         .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void createPayment_withValidData_returnsCreated() throws Exception {
+    Rental rental = rentalRepository.findAll().get(0);
+
+    Reservation reservation = new Reservation(
+        testUser,
+        rental,
+        LocalDate.now().plusDays(10),
+        LocalDate.now().plusDays(15));
+    reservation = reservationRepository.save(reservation);
+
+    long nights = java.time.temporal.ChronoUnit.DAYS.between(reservation.getStartingDate(), reservation.getEndDate());
+    double totalAmount = rental.getValueNight() * nights;
+
+    mockMvc.perform(post("/api/v1/tourist/payments")
+        .header("Authorization", "Bearer " + validToken)
+        .contentType(MediaType.APPLICATION_JSON)
+        .content("""
+            {
+              "reservationId": "%s",
+              "amount": %s
+            }
+            """.formatted(reservation.getId().toString(), totalAmount)))
+        .andExpect(status().isCreated());
+  }
+
+  @Test
+  void createPayment_withoutAuthorization_returns400() throws Exception {
+    mockMvc.perform(post("/api/v1/tourist/payments")
+        .contentType(MediaType.APPLICATION_JSON)
+        .content("""
+            {
+              "reservationId": "550e8400-e29b-41d4-a716-446655440000",
+              "amount": 100.0
+            }
+            """))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void createPayment_withInvalidReservation_returns403() throws Exception {
+    UUID nonExistentId = UUID.randomUUID();
+
+    mockMvc.perform(post("/api/v1/tourist/payments")
+        .header("Authorization", "Bearer " + validToken)
+        .contentType(MediaType.APPLICATION_JSON)
+        .content("""
+            {
+              "reservationId": "%s",
+              "amount": 100.0
+            }
+            """.formatted(nonExistentId)))
+        .andExpect(status().isForbidden());
   }
 
 }

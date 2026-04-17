@@ -2,7 +2,7 @@
 
 ## Crear Reserva
 
-Crea una nueva reservación para un rental.
+Crea una nueva reservación para un rental. Automatically creates a payment with status SUCCESS.
 
 **URL:** `POST /api/v1/tourist/rentals/{rentalId}/reservations`
 
@@ -23,7 +23,7 @@ Crea una nueva reservación para un rental.
 | endDate | Date | Fecha de fin (YYYY-MM-DD) |
 
 **Respuestas:**
-- **201 Created:** Reservación creada
+- **201 Created:** Reservación creada exitosamente (retorna ID y precio total)
 - **400 Bad Request:** Authorization faltante o fechas inválidas
 - **403 Forbidden:** Fechas superpuestas con otra reservación o rental no disponible
 
@@ -35,11 +35,57 @@ curl -X POST "http://localhost:8080/api/v1/tourist/rentals/550e8400-e29b-41d4-a7
   -d '{"startingDate": "2026-05-01", "endDate": "2026-05-05"}'
 ```
 
+**Estructura de respuesta:**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "totalPrice": 750.0
+}
+```
+
 **Notas:**
 - Las reservaciones son por días (no por horas)
 - Las fechas deben ser futuras
 - No se pueden crear reservaciones con fechas que superen otras reservaciones existentes
 - El host del rental puede cancelar la reservación posteriormente
+- Al crear la reservación, se crea automáticamente un pago con estado SUCCESS
+- El campo `totalPrice` se calcula como: número de noches × valor por noche del rental
+
+## Crear Pago
+
+Crea un pago para una reservación existente. El monto debe coincidir con el precio total de la reservación.
+
+**URL:** `POST /api/v1/tourist/payments`
+
+**Encabezados:**
+| Campo | Valor |
+|-------|-------|
+| Authorization | Bearer {TOKEN_JWT} |
+
+**Cuerpo de la solicitud:**
+| Campo | Tipo | Obligatorio | Descripción |
+|-------|------|-------------|-------------|
+| reservationId | UUID | Sí | ID de la reservación |
+| amount | Double | Sí | Monto del pago (debe coincidir con el precio total de la reservación) |
+
+**Respuestas:**
+- **201 Created:** Pago creado exitosamente
+- **400 Bad Request:** Authorization faltante o datos incompletos
+- **403 Forbidden:** Usuario no autorizado, reservación no encontrada, o monto inválido
+
+**Ejemplo de solicitud:**
+```bash
+curl -X POST "http://localhost:8080/api/v1/tourist/payments" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -H "Content-Type: application/json" \
+  -d '{"reservationId": "550e8400-e29b-41d4-a716-446655440000", "amount": 750.0}'
+```
+
+**Notas:**
+- El usuario debe ser el propietario de la reservación
+- El monto debe coincidir exactamente con el precio total de la reservación (noches × valor por noche)
+- El pago se crea con estado SUCCESS por defecto
+- Este endpoint es opcional ya que el pago se crea automáticamente al crear la reservación
 
 ## Crear Reseña
 
