@@ -7,12 +7,13 @@ Crea un nuevo usuario en el sistema.
 **URL:** `POST /api/v1/auth/register`
 
 **Cuerpo de la solicitud (JSON):**
+
 ```json
 {
   "name": "Nombre del usuario",
   "surname": "Apellido del usuario",
-  "city" : "MEDELLIN",
-  "country" : "COLOMBIA",
+  "city": "MEDELLIN",
+  "country": "COLOMBIA",
   "email": "correo@ejemplo.com",
   "password": "contraseña123",
   "rol": "TOURIST"
@@ -26,15 +27,18 @@ Crea un nuevo usuario en el sistema.
 | surname | String | Sí | Apellido del usuario |
 | email | String | Sí | Correo electrónico (debe ser único) |
 | password | String | Sí | Contraseña del usuario |
-| rol | String | Sí | Rol del usuario (TOURIST, HOST, BUSINESS, ADMINISTRATOR) |
+| rol | String | Sí | Rol del usuario (TOURIST, HOST, BUSINESS, EXPERIENCE,ADMINISTRATOR) |
 
 **Respuestas:**
+
 - **201 Created:** Usuario creado exitosamente
 - **409 Conflict:** El correo electrónico ya está registrado
 
-**Nota:** El campo `rol` solo puede aceptar los valores: `TOURIST`, `HOST`, `BUSINESS` o `ADMINISTRATOR`.
+**Nota:** El campo `rol` solo puede aceptar los valores: `TOURIST`, `HOST`, `BUSINESS` , `EXPERIENCE`o `ADMINISTRATOR`.
+**Nota:** El usuario no podria seleccionar `ADMINISTRATOR`.
 
 **Ejemplo de solicitud:**
+
 ```bash
 curl -X POST http://localhost:8080/api/v1/auth/register \
   -H "Content-Type: application/json" \
@@ -54,6 +58,7 @@ Autentica a un usuario y retorna un token JWT.
 **URL:** `POST /api/v1/auth/login`
 
 **Cuerpo de la solicitud (JSON):**
+
 ```json
 {
   "email": "correo@ejemplo.com",
@@ -68,10 +73,12 @@ Autentica a un usuario y retorna un token JWT.
 | password | String | Sí | Contraseña del usuario |
 
 **Respuestas:**
+
 - **200 OK:** Inicio de sesión exitoso (retorna el token JWT)
 - **401 Unauthorized:** Credenciales incorrectas
 
 **Ejemplo de solicitud:**
+
 ```bash
 curl -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
@@ -82,6 +89,7 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 ```
 
 **Respuesta exitosa:**
+
 ```
 eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```

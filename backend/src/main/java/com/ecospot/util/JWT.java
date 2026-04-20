@@ -1,5 +1,6 @@
 package com.ecospot.util;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.UUID;
 
@@ -22,7 +23,7 @@ public class JWT {
   private Long expiration;
 
   private SecretKey getSigningKey() {
-    return Keys.hmacShaKeyFor(secret.getBytes());
+    return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
   }
 
   public String generateToken(UUID userId, String rol) {
