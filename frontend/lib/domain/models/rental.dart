@@ -49,7 +49,7 @@ class Rental {
       country: json['country'] as String,
       location: json['location'] as String?,
       valueNight: (json['valueNight'] as num).toDouble(),
-      isEnable: json['isEnable'] as bool,
+      isEnable: json['enable'] as bool? ?? true,
       reviewAverage: (json['reviewAverage'] as num).toDouble(),
       images: (json['images'] as List<dynamic>?)
               ?.map((e) => RentalImage.fromJson(e as Map<String, dynamic>))

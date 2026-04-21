@@ -40,7 +40,7 @@
         DB_USER = "${DB_USER}";
         DB_PASSWORD = "${DB_PASSWORD}";
         JWT_SECRET = "EcoSpot2026SecretKeyForJWTTokenGen12345678901234567890123456789012345678901234567890";
-        JWT_EXPIRATION = 864000;
+        JWT_EXPIRATION = 8640000;
 
         JAVA_HOME = "${pkgs.openjdk25.home}";
         shellHook = ''

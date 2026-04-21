@@ -49,5 +49,6 @@ windows/
 
 ### Backend
 .pgdata/
+images/
 .env
 test.http

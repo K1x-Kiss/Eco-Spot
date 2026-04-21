@@ -7,6 +7,8 @@ class RentalImage {
     required this.extension,
   });
 
+  String get imageUrl => 'http://10.0.2.2:8080/images/$id.$extension';
+
   factory RentalImage.fromJson(Map<String, dynamic> json) {
     return RentalImage(
       id: json['id'] as String,

@@ -10,9 +10,24 @@ class HostRepository implements HostInterface {
   final http.Client _client = http.Client();
 
   Map<String, String> _headers(String token) => {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      };
+    'Authorization': 'Bearer $token',
+    'Content-Type': 'application/json',
+  };
+
+  String _getMimeType(String path) {
+    final ext = path.split('.').last.toLowerCase();
+    switch (ext) {
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'webp':
+        return 'image/webp';
+      default:
+        return 'application/octet-stream';
+    }
+  }
 
   @override
   Future<Rental?> createRental({
@@ -33,7 +48,7 @@ class HostRepository implements HostInterface {
     final uri = Uri.parse('$baseUrl/rentals');
     final request = http.MultipartRequest('POST', uri);
 
-    request.headers.addAll(_headers(token));
+    request.headers.addAll({'Authorization': 'Bearer $token'});
     request.fields.addAll({
       'name': name,
       'description': description ?? '',
@@ -50,16 +65,41 @@ class HostRepository implements HostInterface {
 
     if (images != null) {
       for (final image in images) {
-        request.files.add(await http.MultipartFile.fromPath('images', image.path));
+        final bytes = await image.readAsBytes();
+        final contentType = http.MediaType.parse(_getMimeType(image.path));
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'images',
+            bytes,
+            filename: image.path.split('/').last,
+            contentType: contentType,
+          ),
+        );
       }
     }
 
     final streamedResponse = await request.send();
     final response = await http.Response.fromStream(streamedResponse);
 
+    // Server returns 201 with empty body on success
     if (response.statusCode == 201) {
-      return Rental.fromJson(
-          jsonDecode(response.body) as Map<String, dynamic>);
+      return Rental(
+        id: '',
+        name: name,
+        description: description,
+        contact: contact,
+        size: size,
+        peopleQuantity: peopleQuantity,
+        rooms: rooms,
+        bathrooms: bathrooms,
+        city: city,
+        country: country,
+        location: location,
+        valueNight: valueNight,
+        isEnable: true,
+        reviewAverage: 0.0,
+        images: [],
+      );
     }
     return null;
   }
@@ -84,7 +124,7 @@ class HostRepository implements HostInterface {
     final uri = Uri.parse('$baseUrl/rentals/$rentalId');
     final request = http.MultipartRequest('PUT', uri);
 
-    request.headers.addAll(_headers(token));
+    request.headers.addAll({'Authorization': 'Bearer $token'});
     request.fields.addAll({
       'name': name,
       'description': description ?? '',
@@ -101,16 +141,41 @@ class HostRepository implements HostInterface {
 
     if (images != null) {
       for (final image in images) {
-        request.files.add(await http.MultipartFile.fromPath('images', image.path));
+        final bytes = await image.readAsBytes();
+        final contentType = http.MediaType.parse(_getMimeType(image.path));
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'images',
+            bytes,
+            filename: image.path.split('/').last,
+            contentType: contentType,
+          ),
+        );
       }
     }
 
     final streamedResponse = await request.send();
     final response = await http.Response.fromStream(streamedResponse);
 
+    // Server returns 200 with empty body on success
     if (response.statusCode == 200) {
-      return Rental.fromJson(
-          jsonDecode(response.body) as Map<String, dynamic>);
+      return Rental(
+        id: rentalId,
+        name: name,
+        description: description,
+        contact: contact,
+        size: size,
+        peopleQuantity: peopleQuantity,
+        rooms: rooms,
+        bathrooms: bathrooms,
+        city: city,
+        country: country,
+        location: location,
+        valueNight: valueNight,
+        isEnable: true,
+        reviewAverage: 0.0,
+        images: [],
+      );
     }
     return null;
   }
@@ -133,13 +198,13 @@ class HostRepository implements HostInterface {
     required String token,
     bool includeDisabled = false,
   }) async {
-    final uri = Uri.parse('$baseUrl/rentals').replace(
-      queryParameters: {'includeDisabled': includeDisabled.toString()},
-    );
+    final uri = Uri.parse(
+      '$baseUrl/rentals',
+    ).replace(queryParameters: {'includeDisabled': includeDisabled.toString()});
 
     final response = await _client.get(uri, headers: _headers(token));
 
-    if (response.statusCode == 200) {
+    if (response.statusCode == 200 && response.body.isNotEmpty) {
       final List<dynamic> jsonList = jsonDecode(response.body) as List<dynamic>;
       return jsonList
           .map((e) => Rental.fromJson(e as Map<String, dynamic>))
@@ -149,22 +214,18 @@ class HostRepository implements HostInterface {
   }
 
   @override
-  Future<Rental?> toggleRentalEnable({
+  Future<bool> toggleRentalEnable({
     required String token,
     required String rentalId,
     required bool enabled,
   }) async {
-    final uri = Uri.parse('$baseUrl/rentals/$rentalId/enable').replace(
-      queryParameters: {'enabled': enabled.toString()},
-    );
+    final uri = Uri.parse(
+      '$baseUrl/rentals/$rentalId/enable',
+    ).replace(queryParameters: {'enabled': enabled.toString()});
 
     final response = await _client.patch(uri, headers: _headers(token));
 
-    if (response.statusCode == 200) {
-      return Rental.fromJson(
-          jsonDecode(response.body) as Map<String, dynamic>);
-    }
-    return null;
+    return response.statusCode == 200;
   }
 
   @override
@@ -173,13 +234,13 @@ class HostRepository implements HostInterface {
     required String rentalId,
     bool upcoming = true,
   }) async {
-    final uri = Uri.parse('$baseUrl/rentals/$rentalId/reservations').replace(
-      queryParameters: {'upcoming': upcoming.toString()},
-    );
+    final uri = Uri.parse(
+      '$baseUrl/rentals/$rentalId/reservations',
+    ).replace(queryParameters: {'upcoming': upcoming.toString()});
 
     final response = await _client.get(uri, headers: _headers(token));
 
-    if (response.statusCode == 200) {
+    if (response.statusCode == 200 && response.body.isNotEmpty) {
       final List<dynamic> jsonList = jsonDecode(response.body) as List<dynamic>;
       return jsonList
           .map((e) => Reservation.fromJson(e as Map<String, dynamic>))
@@ -201,3 +262,4 @@ class HostRepository implements HostInterface {
     return response.statusCode == 200;
   }
 }
+

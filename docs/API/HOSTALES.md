@@ -32,11 +32,13 @@ Crea un nuevo rental (propiedad de alquiler) asociado al usuario HOST autenticad
 | images | File[] | No | Imágenes (máximo 3, formatos: jpg, png, webp) |
 
 **Respuestas:**
+
 - **201 Created:** Rental creado exitosamente
 - **400 Bad Request:** Datos faltantes, inválidos o más de 3 imágenes
 - **401 Unauthorized:** Token inválido o usuario no tiene rol HOST
 
 **Ejemplo de solicitud:**
+
 ```bash
 curl -X POST "http://localhost:8080/api/v1/host/rentals" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
@@ -59,6 +61,7 @@ curl -X POST "http://localhost:8080/api/v1/host/rentals" \
 ```
 
 **Notas:**
+
 - Solo usuarios con rol HOST pueden acceder a este endpoint
 - Las imágenes se almacenan en la carpeta `/images/` con nombres UUID
 - La tabla `images` guarda el ID (UUID) y la extensión del archivo
@@ -101,6 +104,7 @@ Actualiza un rental existente. Solo el HOST que creó el rental o un ADMIN puede
 | images | File[] | No | Imágenes (máximo 3, formatos: jpg, png, webp). Si se envían, reemplazan todas las imágenes existentes |
 
 **Respuestas:**
+
 - **200 OK:** Rental actualizado exitosamente
 - **400 Bad Request:** Datos faltantes, inválidos o más de 3 imágenes
 - **401 Unauthorized:** Token inválido o usuario no tiene rol HOST/ADMIN
@@ -108,6 +112,7 @@ Actualiza un rental existente. Solo el HOST que creó el rental o un ADMIN puede
 - **404 Not Found:** Rental no existe
 
 **Ejemplo de solicitud:**
+
 ```bash
 curl -X PUT "http://localhost:8080/api/v1/host/rentals/550e8400-e29b-41d4-a716-446655440000" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
@@ -129,6 +134,7 @@ curl -X PUT "http://localhost:8080/api/v1/host/rentals/550e8400-e29b-41d4-a716-4
 ```
 
 **Notas:**
+
 - Solo el HOST que creó el rental o un usuario con rol ADMIN pueden actualizarlo
 - Las imágenes existentes serán eliminadas y reemplazadas por las nuevas
 - Todos los campos son requeridos (full update)
@@ -150,6 +156,7 @@ Elimina un rental existente. Solo el HOST que creó el rental o un ADMIN pueden 
 | rentalId | UUID | ID del rental a eliminar |
 
 **Respuestas:**
+
 - **200 OK:** Rental eliminado exitosamente
 - **400 Bad Request:** Encabezado Authorization faltante
 - **401 Unauthorized:** Token inválido
@@ -157,12 +164,14 @@ Elimina un rental existente. Solo el HOST que creó el rental o un ADMIN pueden 
 - **409 Conflict:** El rental tiene reservas futuras
 
 **Ejemplo de solicitud:**
+
 ```bash
 curl -X DELETE "http://localhost:8080/api/v1/host/rentals/550e8400-e29b-41d4-a716-446655440000" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 ```
 
 **Notas:**
+
 - Solo el HOST que creó el rental o un usuario con rol ADMIN pueden eliminarlo
 - No se puede eliminar un rental que tiene reservas futuras (retorna 409 Conflict)
 - Todas las imágenes asociadas al rental también serán eliminadas (archivos y registros en la base de datos)
@@ -185,11 +194,13 @@ Retorna todos los rentals del usuario autenticado.
 | includeDisabled | boolean | No | false | Incluir rentals deshabilitados |
 
 **Respuestas:**
+
 - **200 OK:** Lista de rentals del usuario
 - **400 Bad Request:** Encabezado Authorization faltante
 - **401 Unauthorized:** Token inválido
 
 **Ejemplo de solicitud:**
+
 ```bash
 curl -X GET "http://localhost:8080/api/v1/host/rentals" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
@@ -199,29 +210,31 @@ curl -X GET "http://localhost:8080/api/v1/host/rentals?includeDisabled=true" \
 ```
 
 **Ejemplo de respuesta:**
+
 ```json
-[{
-  "id": "550e8400-e29b-41d4-a716-446655440000",
-  "name": "Beach House",
-  "description": "Nice house",
-  "contact": "1234567890",
-  "size": 100,
-  "peopleQuantity": 4,
-  "rooms": 2,
-  "bathrooms": 1,
-  "city": "MIAMI",
-  "country": "USA",
-  "location": "123 Beach St",
-  "valueNight": 150.0,
-  "isEnable": true,
-  "reviewAverage": 4.5,
-  "images": [
-    { "id": "uuid1", "extension": "jpg" }
-  ]
-}]
+[
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "Beach House",
+    "description": "Nice house",
+    "contact": "1234567890",
+    "size": 100,
+    "peopleQuantity": 4,
+    "rooms": 2,
+    "bathrooms": 1,
+    "city": "MIAMI",
+    "country": "USA",
+    "location": "123 Beach St",
+    "valueNight": 150.0,
+    "enable": true,
+    "reviewAverage": 4.5,
+    "images": [{ "id": "uuid1", "extension": "jpg" }]
+  }
+]
 ```
 
 **Notas:**
+
 - El usuario debe tener un token JWT válido
 - Por defecto solo retorna rentals con `is_enable=true`
 - El campo `reviewAverage` retorna el promedio de reseñas (0.0 si no hay reseñas)
@@ -250,11 +263,13 @@ Habilita o deshabilita un rental existente.
 | enabled | boolean | Sí | true para habilitar, false para deshabilitar |
 
 **Respuestas:**
+
 - **200 OK:** Rental actualizado exitosamente
 - **400 Bad Request:** Encabezado Authorization faltante
 - **403 Forbidden:** Usuario no es el propietario ni ADMIN
 
 **Ejemplo de solicitud:**
+
 ```bash
 # Habilitar rental
 curl -X PATCH "http://localhost:8080/api/v1/host/rentals/550e8400-e29b-41d4-a716-446655440000/enable?enabled=true" \
@@ -266,6 +281,7 @@ curl -X PATCH "http://localhost:8080/api/v1/host/rentals/550e8400-e29b-41d4-a716
 ```
 
 **Notas:**
+
 - Solo el HOST que creó el rental o un usuario con rol ADMIN pueden habilitar/deshabilitarlo
 - Los rentals deshabilitados no aparecen en las búsquedas de turistas
 - Los rentals con reservas futuras no pueden ser deshabilitados
@@ -292,11 +308,13 @@ Retorna las reservaciones de un rental específico.
 | upcoming | boolean | No | true | true = reservaciones futuras, false = reservaciones pasadas |
 
 **Respuestas:**
+
 - **200 OK:** Lista de reservaciones del rental
 - **400 Bad Request:** Encabezado Authorization faltante
 - **403 Forbidden:** Usuario no es el propietario ni ADMIN
 
 **Ejemplo de solicitud:**
+
 ```bash
 # Reservaciones futuras
 curl -X GET "http://localhost:8080/api/v1/host/rentals/550e8400-e29b-41d4-a716-446655440000/reservations?upcoming=true" \
@@ -308,20 +326,24 @@ curl -X GET "http://localhost:8080/api/v1/host/rentals/550e8400-e29b-41d4-a716-4
 ```
 
 **Ejemplo de respuesta:**
+
 ```json
-[{
-  "id": "550e8400-e29b-41d4-a716-446655440001",
-  "rentalId": "550e8400-e29b-41d4-a716-446655440000",
-  "rentalName": "Beach House",
-  "userName": "John",
-  "userSurname": "Doe",
-  "startingDate": "2026-05-01",
-  "endDate": "2026-05-05",
-  "isCancelled": false
-}]
+[
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440001",
+    "rentalId": "550e8400-e29b-41d4-a716-446655440000",
+    "rentalName": "Beach House",
+    "userName": "John",
+    "userSurname": "Doe",
+    "startingDate": "2026-05-01",
+    "endDate": "2026-05-05",
+    "isCancelled": false
+  }
+]
 ```
 
 **Notas:**
+
 - Solo el propietario del rental o un ADMIN pueden ver las reservaciones
 - Las reservaciones canceladas no se muestran
 - Por defecto retorna reservaciones futuras (`upcoming=true`)
@@ -343,17 +365,21 @@ Cancela una reservación de un rental.
 | reservationId | UUID | ID de la reservación |
 
 **Respuestas:**
+
 - **200 OK:** Reservación cancelada exitosamente
 - **400 Bad Request:** Encabezado Authorization faltante
 - **403 Forbidden:** No autorizado o reservación ya cancelada
 
 **Ejemplo de solicitud:**
+
 ```bash
 curl -X PATCH "http://localhost:8080/api/v1/host/reservations/550e8400-e29b-41d4-a716-446655440000/cancel" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 ```
 
 **Notas:**
+
 - Solo el HOST que creó el rental, un ADMIN, o el turista que hizo la reservación pueden cancelarla
 - No se puede cancelar una reservación que ya está cancelada
 - Las reservaciones canceladas no aparecen en las listas de reservaciones
+

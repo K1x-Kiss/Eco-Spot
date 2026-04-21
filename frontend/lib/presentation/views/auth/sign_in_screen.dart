@@ -86,7 +86,7 @@ class _SignInScreenState extends State<SignInScreen> {
         Navigator.pushReplacementNamed(context, Routes.adminHomeScreen);
         break;
       case 'ADMINISTRATOR':
-        // TODO: Navigate to Experience panel
+        // TODO: Navigate to Administrator panel
         Navigator.pushReplacementNamed(context, Routes.adminHomeScreen);
         break;
     }

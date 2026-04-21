@@ -43,7 +43,7 @@ abstract class HostInterface {
     bool includeDisabled = false,
   });
 
-  Future<Rental?> toggleRentalEnable({
+  Future<bool> toggleRentalEnable({
     required String token,
     required String rentalId,
     required bool enabled,

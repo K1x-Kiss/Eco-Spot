@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/data/repository_implementations/auth_repository.dart';
 import 'package:frontend/presentation/views/host/host_bundle.dart';
+import 'package:frontend/presentation/views/host/reservations_screen.dart';
 import 'package:frontend/presentation/views/auth/auth_bundle.dart';
+import 'package:frontend/presentation/views/splash_screen.dart';
 
 class Routes {
-  static const String initialRoute = signInScreen;
+  static const String initialRoute = splashScreen;
 
+  static const String splashScreen = 'splash';
   static const String signInScreen = 'signin';
   static const String signUpScreen = 'signup';
   static const String homeScreen = 'home';
@@ -14,8 +17,10 @@ class Routes {
   static const String businessHomeScreen = 'business_home';
   static const String adminHomeScreen = 'admin_home';
   static const String createRentalScreen = 'create_rental';
+  static const String reservationsScreen = 'reservations';
 
-  static Map<String, Widget Function(BuildContext)> routes = {
+static Map<String, Widget Function(BuildContext)> routes = {
+    splashScreen: (context) => const SplashScreen(),
     signInScreen: (context) => SignInScreen(authInterface: AuthRepository()),
     signUpScreen: (context) => SignUpScreen(authInterface: AuthRepository()),
     homeScreen: (context) =>
@@ -23,12 +28,15 @@ class Routes {
     touristHomeScreen: (context) =>
         const Scaffold(body: Center(child: Text('Tourist Home Screen'))),
     hostHomeScreen: (context) => const HostHomeScreen(),
-    createRentalScreen: (context) => const Scaffold(
-      body: Center(child: Text('Create Rental Screen - Coming Soon')),
-    ),
-    businessHomeScreen: (context) =>
-        const Scaffold(body: Center(child: Text('Business Home Screen'))),
-    adminHomeScreen: (context) =>
-        const Scaffold(body: Center(child: Text('Admin Home Screen'))),
+    createRentalScreen: (context) => const RentalFormScreen(),
+reservationsScreen: (context) {
+      final args = ModalRoute.of(context)!.settings.arguments as Map<String, String>;
+      return ReservationsScreen(
+        rentalId: args['rentalId']!,
+        rentalName: args['rentalName']!,
+      );
+    },
+    businessHomeScreen: (context) => const Scaffold(body: Center(child: Text('Business Home Screen'))),
+    adminHomeScreen: (context) => const Scaffold(body: Center(child: Text('Admin Home Screen'))),
   };
 }

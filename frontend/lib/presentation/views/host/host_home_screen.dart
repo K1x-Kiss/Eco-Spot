@@ -4,6 +4,7 @@ import 'package:frontend/domain/models/rental.dart';
 import 'package:frontend/domain/providers/host_provider.dart';
 import 'package:frontend/domain/providers/secure_storage_provider.dart';
 import 'package:frontend/presentation/routes/routes.dart';
+import 'package:frontend/presentation/views/host/rental_form_screen.dart';
 
 class HostHomeScreen extends StatefulWidget {
   const HostHomeScreen({super.key});
@@ -14,19 +15,37 @@ class HostHomeScreen extends StatefulWidget {
 
 class _HostHomeScreenState extends State<HostHomeScreen> {
   late HostProvider _hostProvider;
+  bool _includeDisabled = false;
 
   @override
   void initState() {
     super.initState();
     _hostProvider = HostProvider();
-    _loadRentals();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadRentals();
+    });
   }
 
   Future<void> _loadRentals() async {
     final secureStorage = context.read<SecureStorageProvider>();
     final token = await secureStorage.read('token');
     if (token != null) {
-      await _hostProvider.loadRentals(token);
+      await _hostProvider.loadRentals(token, includeDisabled: _includeDisabled);
+    }
+  }
+
+  void _toggleIncludeDisabled() {
+    setState(() {
+      _includeDisabled = !_includeDisabled;
+    });
+    _loadRentals();
+  }
+
+  Future<void> _logout() async {
+    final secureStorage = context.read<SecureStorageProvider>();
+    await secureStorage.deleteAll();
+    if (mounted) {
+      Navigator.pushReplacementNamed(context, Routes.signInScreen);
     }
   }
 
@@ -47,81 +66,43 @@ class _HostHomeScreenState extends State<HostHomeScreen> {
           backgroundColor: Colors.transparent,
           elevation: 0,
           foregroundColor: const Color(0xFFFF385C),
+          actions: [
+            IconButton(icon: const Icon(Icons.logout), onPressed: _logout),
+          ],
         ),
         body: Consumer<HostProvider>(
           builder: (context, hostProvider, child) {
-            if (hostProvider.isLoading) {
-              return const Center(
-                child: CircularProgressIndicator(color: Color(0xFFFF385C)),
-              );
-            }
-
-            if (hostProvider.error != null) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Error: ${hostProvider.error}',
-                      style: const TextStyle(color: Colors.red),
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: _loadRentals,
-                      child: const Text('Retry'),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            if (hostProvider.rentals.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.home_outlined,
-                      size: 64,
-                      color: Colors.grey,
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'No rentals yet',
-                      style: TextStyle(fontSize: 18, color: Colors.grey),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Create your first rental!',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.pushNamed(context, Routes.createRentalScreen);
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFF385C),
-                        foregroundColor: Colors.white,
+            return Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      FilterChip(
+                        label: Text(
+                          _includeDisabled ? 'All rentals' : 'Active only',
+                        ),
+                        selected: _includeDisabled,
+                        onSelected: (_) => _toggleIncludeDisabled(),
+                        selectedColor: const Color(
+                          0xFFFF385C,
+                        ).withValues(alpha: 0.2),
+                        checkmarkColor: const Color(0xFFFF385C),
+                        labelStyle: TextStyle(
+                          color: _includeDisabled
+                              ? const Color(0xFFFF385C)
+                              : Colors.grey[700],
+                        ),
                       ),
-                      child: const Text('Create Rental'),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              );
-            }
-
-            return RefreshIndicator(
-              onRefresh: _loadRentals,
-              color: const Color(0xFFFF385C),
-              child: ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: hostProvider.rentals.length,
-                itemBuilder: (context, index) {
-                  final rental = hostProvider.rentals[index];
-                  return _RentalCard(rental: rental);
-                },
-              ),
+                Expanded(child: _buildRentalsList(hostProvider)),
+              ],
             );
           },
         ),
@@ -129,7 +110,10 @@ class _HostHomeScreenState extends State<HostHomeScreen> {
           backgroundColor: const Color(0xFFFF385C),
           foregroundColor: Colors.white,
           onPressed: () {
-            Navigator.pushNamed(context, Routes.createRentalScreen);
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const RentalFormScreen()),
+            );
           },
           icon: const Icon(Icons.add),
           label: const Text('Add Property'),
@@ -137,12 +121,199 @@ class _HostHomeScreenState extends State<HostHomeScreen> {
       ),
     );
   }
+
+  Widget _buildRentalsList(HostProvider hostProvider) {
+    if (hostProvider.isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: Color(0xFFFF385C)),
+      );
+    }
+
+    if (hostProvider.error != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Error: ${hostProvider.error}',
+              style: const TextStyle(color: Colors.red),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(onPressed: _loadRentals, child: const Text('Retry')),
+          ],
+        ),
+      );
+    }
+
+    if (hostProvider.rentals.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.home_outlined, size: 64, color: Colors.grey),
+            const SizedBox(height: 16),
+            const Text(
+              'No rentals yet',
+              style: TextStyle(fontSize: 18, color: Colors.grey),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Create your first rental!',
+              style: TextStyle(color: Colors.grey),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const RentalFormScreen(),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF385C),
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Create Rental'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadRentals,
+      color: const Color(0xFFFF385C),
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: hostProvider.rentals.length,
+        itemBuilder: (context, index) {
+          final rental = hostProvider.rentals[index];
+          return GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => RentalFormScreen(rental: rental),
+                ),
+              );
+            },
+            onLongPress: () async {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Delete Rental'),
+                  content: Text(
+                    'Are you sure you want to delete "${rental.name}"?',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      style: TextButton.styleFrom(foregroundColor: Colors.red),
+                      child: const Text('Delete'),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirm == true && context.mounted) {
+                final secureStorage = context.read<SecureStorageProvider>();
+                final token = await secureStorage.read('token');
+                if (token != null && context.mounted) {
+                  final success = await hostProvider.deleteRental(
+                    token,
+                    rental.id,
+                  );
+                  if (!success && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          hostProvider.error ?? 'Failed to delete rental',
+                        ),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              }
+            },
+            child: _RentalCard(
+              rental: rental,
+              onToggle: (enabled) async {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: Text(enabled ? 'Enable Rental' : 'Disable Rental'),
+                    content: Text(
+                      enabled
+                          ? 'Are you sure you want to enable this rental?'
+                          : 'Are you sure you want to disable this rental?',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('Cancel'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        child: Text(enabled ? 'Enable' : 'Disable'),
+                      ),
+                    ],
+                  ),
+                );
+
+                if (confirm == true && context.mounted) {
+                  final secureStorage = context.read<SecureStorageProvider>();
+                  final token = await secureStorage.read('token');
+                  if (token != null && context.mounted) {
+                    final success = await hostProvider.toggleRentalEnable(
+                      token,
+                      rental.id,
+                      enabled,
+                    );
+                    if (!success && context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            hostProvider.error ?? 'Failed to toggle rental',
+                          ),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                }
+              },
+              onViewReservations: () {
+                Navigator.pushNamed(
+                  context,
+                  Routes.reservationsScreen,
+                  arguments: {'rentalId': rental.id, 'rentalName': rental.name},
+                );
+              },
+            ),
+          );
+        },
+      ),
+    );
+  }
 }
 
 class _RentalCard extends StatelessWidget {
   final Rental rental;
+  final Function(bool)? onToggle;
+  final VoidCallback? onViewReservations;
 
-  const _RentalCard({required this.rental});
+  const _RentalCard({
+    required this.rental,
+    this.onToggle,
+    this.onViewReservations,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -157,11 +328,18 @@ class _RentalCard extends StatelessWidget {
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(12),
               ),
-              child: Container(
+              child: Image.network(
+                rental.images.first.imageUrl,
                 height: 150,
                 width: double.infinity,
-                color: Colors.grey[300],
-                child: const Icon(Icons.image, size: 48, color: Colors.grey),
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    height: 150,
+                    color: Colors.grey[300],
+                    child: const Icon(Icons.broken_image, size: 48),
+                  );
+                },
               ),
             )
           else
@@ -193,25 +371,12 @@ class _RentalCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: rental.isEnable
-                            ? Colors.green[100]
-                            : Colors.red[100],
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        rental.isEnable ? 'Active' : 'Inactive',
-                        style: TextStyle(
-                          color: rental.isEnable ? Colors.green : Colors.red,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                    Switch(
+                      value: rental.isEnable,
+                      activeTrackColor: const Color(0xFFFF385C),
+                      onChanged: onToggle != null
+                          ? (value) => onToggle!(value)
+                          : null,
                     ),
                   ],
                 ),
@@ -269,6 +434,19 @@ class _RentalCard extends StatelessWidget {
                     ),
                   ],
                 ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: onViewReservations,
+                    icon: const Icon(Icons.calendar_today),
+                    label: const Text('See Reservations'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFFFF385C),
+                      side: const BorderSide(color: Color(0xFFFF385C)),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -277,3 +455,4 @@ class _RentalCard extends StatelessWidget {
     );
   }
 }
+
