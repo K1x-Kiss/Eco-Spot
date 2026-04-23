@@ -37,14 +37,22 @@ class SearchResult {
 
   SearchResult({required this.results});
 
-  factory SearchResult.fromJson(Map<String, dynamic> json) {
-    return SearchResult(
-      results:
-          (json['results'] as List<dynamic>?)
-              ?.map((e) => e as Map<String, dynamic>)
-              .toList() ??
-          [],
-    );
+  factory SearchResult.fromJson(dynamic json) {
+    if (json is List) {
+      return SearchResult(
+        results: json.map((e) => e as Map<String, dynamic>).toList(),
+      );
+    }
+    if (json is Map<String, dynamic>) {
+      return SearchResult(
+        results:
+            (json['results'] as List<dynamic>?)
+                ?.map((e) => e as Map<String, dynamic>)
+                .toList() ??
+                [],
+      );
+    }
+    return SearchResult(results: []);
   }
 }
 

@@ -6,67 +6,46 @@ import 'package:frontend/domain/providers/secure_storage_provider.dart';
 import 'package:frontend/presentation/widgets/tourist_sidebar.dart';
 import 'package:frontend/presentation/widgets/tourist_bottom_nav.dart';
 
-class TouristSearchScreen extends StatefulWidget {
-  const TouristSearchScreen({super.key});
+class TouristReservationsScreen extends StatefulWidget {
+  const TouristReservationsScreen({super.key});
 
   @override
-  State<TouristSearchScreen> createState() => _TouristSearchScreenState();
+  State<TouristReservationsScreen> createState() =>
+      _TouristReservationsScreenState();
 }
 
-class _TouristSearchScreenState extends State<TouristSearchScreen> {
+class _TouristReservationsScreenState extends State<TouristReservationsScreen> {
   late TouristProvider _touristProvider;
-  int _selectedCategory = 0;
-  int _currentNavIndex = 1;
-  final TextEditingController _searchController = TextEditingController();
+  int _currentNavIndex = 2;
+  bool _showUpcoming = true;
+  bool _hasSearched = false;
 
   @override
   void initState() {
     super.initState();
     _touristProvider = TouristProvider();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadReservations();
+    });
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _search() async {
-    final searchBy = _searchController.text.trim();
-    if (searchBy.isEmpty) return;
-
+  Future<void> _loadReservations() async {
     final secureStorage = context.read<SecureStorageProvider>();
     final token = await secureStorage.read('token');
     if (token != null) {
-      String? category;
-      switch (_selectedCategory) {
-        case 1:
-          category = 'RENTAL';
-          break;
-        case 2:
-          category = 'BUSINESS';
-          break;
-        case 3:
-          category = 'EXPERIENCE';
-          break;
-        default:
-          category = null;
-      }
-      await _touristProvider.searchItems(
-        token: token,
-        searchBy: searchBy,
-        category: category,
+      _hasSearched = true;
+      await _touristProvider.loadUserReservations(
+        token,
+        upcoming: _showUpcoming,
       );
     }
   }
 
-  void _selectCategory(int index) {
+  void _toggleUpcoming() {
     setState(() {
-      _selectedCategory = index;
+      _showUpcoming = !_showUpcoming;
     });
-    if (_searchController.text.trim().isNotEmpty) {
-      _search();
-    }
+    _loadReservations();
   }
 
   @override
@@ -77,7 +56,7 @@ class _TouristSearchScreenState extends State<TouristSearchScreen> {
         backgroundColor: const Color(0xFFF7F7F7),
         appBar: AppBar(
           title: const Text(
-            'Search',
+            'Reservations',
             style: TextStyle(
               color: Color(0xFFFF385C),
               fontWeight: FontWeight.w700,
@@ -86,31 +65,13 @@ class _TouristSearchScreenState extends State<TouristSearchScreen> {
           backgroundColor: Colors.transparent,
           elevation: 0,
           foregroundColor: const Color(0xFFFF385C),
-          actions: [Icon(Icons.notifications)],
+          actions: const [Icon(Icons.notifications)],
         ),
         drawer: const TouristSidebar(),
         body: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Search for rentals, experiences...',
-                  prefixIcon: const Icon(Icons.search),
-                  suffixIcon: IconButton(
-                    icon: const Icon(Icons.send),
-                    onPressed: _search,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                onSubmitted: (_) => _search(),
-              ),
-            ),
-            _buildCategoryFilter(),
-            Expanded(child: _buildResultsList()),
+            _buildFilterToggle(),
+            Expanded(child: _buildReservationsList()),
           ],
         ),
         bottomNavigationBar: TouristBottomNav(
@@ -121,8 +82,8 @@ class _TouristSearchScreenState extends State<TouristSearchScreen> {
             });
             if (index == 0) {
               Navigator.pushReplacementNamed(context, 'tourist_home');
-            } else if (index == 2) {
-              Navigator.pushNamed(context, 'tourist_reservations');
+            } else if (index == 1) {
+              Navigator.pushNamed(context, 'tourist_search');
             } else if (index == 3) {
               Navigator.pushNamed(context, 'tourist_profile');
             }
@@ -132,36 +93,43 @@ class _TouristSearchScreenState extends State<TouristSearchScreen> {
     );
   }
 
-  Widget _buildCategoryFilter() {
-    final categories = ['All', 'Rentals', 'Businesses', 'Experiences'];
-    return SizedBox(
-      height: 50,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: categories.length,
-        itemBuilder: (context, index) {
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: FilterChip(
-              label: Text(categories[index]),
-              selected: _selectedCategory == index,
-              onSelected: (_) => _selectCategory(index),
-              selectedColor: const Color(0xFFFF385C).withValues(alpha: 0.2),
-              checkmarkColor: const Color(0xFFFF385C),
-              labelStyle: TextStyle(
-                color: _selectedCategory == index
-                    ? const Color(0xFFFF385C)
-                    : Colors.grey[700],
-              ),
+  Widget _buildFilterToggle() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          FilterChip(
+            label: const Text('Upcoming'),
+            selected: _showUpcoming,
+            onSelected: (_) => _toggleUpcoming(),
+            selectedColor: const Color(0xFFFF385C).withValues(alpha: 0.2),
+            checkmarkColor: const Color(0xFFFF385C),
+            labelStyle: TextStyle(
+              color: _showUpcoming
+                  ? const Color(0xFFFF385C)
+                  : Colors.grey[700],
             ),
-          );
-        },
+          ),
+          const SizedBox(width: 8),
+          FilterChip(
+            label: const Text('Past'),
+            selected: !_showUpcoming,
+            onSelected: (_) => _toggleUpcoming(),
+            selectedColor: const Color(0xFFFF385C).withValues(alpha: 0.2),
+            checkmarkColor: const Color(0xFFFF385C),
+            labelStyle: TextStyle(
+              color: !_showUpcoming
+                  ? const Color(0xFFFF385C)
+                  : Colors.grey[700],
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildResultsList() {
+  Widget _buildReservationsList() {
     return Consumer<TouristProvider>(
       builder: (context, touristProvider, child) {
         if (touristProvider.isLoading) {
@@ -170,27 +138,30 @@ class _TouristSearchScreenState extends State<TouristSearchScreen> {
           );
         }
 
-        final results = touristProvider.searchResults?.results ?? [];
+        final reservations = touristProvider.userReservations;
 
-        if (results.isEmpty) {
+        if (!_hasSearched) {
+          return const Center(
+            child: CircularProgressIndicator(color: Color(0xFFFF385C)),
+          );
+        }
+
+        if (reservations.isEmpty) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  Icons.search,
+                const Icon(
+                  Icons.calendar_today_outlined,
                   size: 64,
                   color: Colors.grey,
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  'Search for something',
-                  style: TextStyle(fontSize: 18, color: Colors.grey),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Enter a search term to find rentals, experiences...',
-                  style: TextStyle(color: Colors.grey),
+                Text(
+                  _showUpcoming
+                      ? 'No upcoming reservations'
+                      : 'No past reservations',
+                  style: const TextStyle(fontSize: 18, color: Colors.grey),
                 ),
               ],
             ),
@@ -198,13 +169,13 @@ class _TouristSearchScreenState extends State<TouristSearchScreen> {
         }
 
         return RefreshIndicator(
-          onRefresh: _search,
+          onRefresh: _loadReservations,
           color: const Color(0xFFFF385C),
           child: ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: results.length,
+            itemCount: reservations.length,
             itemBuilder: (context, index) {
-              return _buildItemCard(results[index]);
+              return _buildReservationCard(reservations[index]);
             },
           ),
         );
@@ -212,7 +183,7 @@ class _TouristSearchScreenState extends State<TouristSearchScreen> {
     );
   }
 
-  Widget _buildItemCard(Map<String, dynamic> item) {
+  Widget _buildReservationCard(Map<String, dynamic> item) {
     final name = item['name'] ?? 'Unknown';
     final city = item['city'] ?? '';
     final country = item['country'] ?? '';
@@ -226,7 +197,8 @@ class _TouristSearchScreenState extends State<TouristSearchScreen> {
         imageUrl =
             "http://10.0.2.2:8080/images/${firstImage['id']}.${firstImage['extension']}";
       } else if (firstImage is Rental) {
-        imageUrl = firstImage.images.isNotEmpty ? firstImage.images.first.imageUrl : null;
+        imageUrl =
+            firstImage.images.isNotEmpty ? firstImage.images.first.imageUrl : null;
       }
     }
 
@@ -238,7 +210,8 @@ class _TouristSearchScreenState extends State<TouristSearchScreen> {
         children: [
           if (imageUrl != null)
             ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(12)),
               child: Image.network(
                 imageUrl,
                 height: 150,
@@ -255,7 +228,8 @@ class _TouristSearchScreenState extends State<TouristSearchScreen> {
             )
           else
             ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(12)),
               child: Container(
                 height: 150,
                 width: double.infinity,

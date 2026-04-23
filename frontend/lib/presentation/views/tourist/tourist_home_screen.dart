@@ -80,6 +80,10 @@ class _TouristHomeScreenState extends State<TouristHomeScreen> {
             });
             if (index == 1) {
               Navigator.pushNamed(context, 'tourist_search');
+            } else if (index == 2) {
+              Navigator.pushNamed(context, 'tourist_reservations');
+            } else if (index == 3) {
+              Navigator.pushNamed(context, 'tourist_profile');
             }
           },
         ),

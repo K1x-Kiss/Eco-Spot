@@ -126,9 +126,7 @@ class TouristRepository implements TouristInterface {
     final response = await _client.get(uri, headers: _headers(token));
 
     if (response.statusCode == 200 && response.body.isNotEmpty) {
-      return SearchResult.fromJson(
-        jsonDecode(response.body) as Map<String, dynamic>,
-      );
+      return SearchResult.fromJson(jsonDecode(response.body));
     }
     return null;
   }

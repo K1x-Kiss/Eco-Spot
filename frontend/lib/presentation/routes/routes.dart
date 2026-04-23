@@ -20,6 +20,8 @@ class Routes {
   static const String createRentalScreen = 'create_rental';
   static const String reservationsScreen = 'reservations';
   static const String touristSearchScreen = 'tourist_search';
+  static const String touristReservationsScreen = 'tourist_reservations';
+  static const String touristProfileScreen = 'tourist_profile';
 
   static Map<String, Widget Function(BuildContext)> routes = {
     splashScreen: (context) => const SplashScreen(),
@@ -29,6 +31,8 @@ class Routes {
         const Scaffold(body: Center(child: Text('Home Screen'))),
     touristHomeScreen: (context) => const TouristHomeScreen(),
     touristSearchScreen: (context) => const TouristSearchScreen(),
+    touristReservationsScreen: (context) => const TouristReservationsScreen(),
+    touristProfileScreen: (context) => const TouristProfileScreen(),
     hostHomeScreen: (context) => const HostHomeScreen(),
     createRentalScreen: (context) => const RentalFormScreen(),
     reservationsScreen: (context) {
