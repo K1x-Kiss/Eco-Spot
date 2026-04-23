@@ -51,3 +51,4 @@ windows/
 .pgdata/
 .env
 test.http
+images/
