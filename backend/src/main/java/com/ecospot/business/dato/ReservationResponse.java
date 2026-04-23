@@ -6,6 +6,7 @@ import java.util.UUID;
 
 public class ReservationResponse {
 
+  private UUID reservationId;
   private UUID id;
   private String name;
   private String description;
@@ -32,10 +33,18 @@ public class ReservationResponse {
 
   public ReservationResponse(UUID id, UUID rentalId, String rentalName, String userName,
       String userSurname, LocalDate startingDate, LocalDate endDate, boolean isCancelled) {
-    this.id = id;
+    this.reservationId = id;
     this.startingDate = startingDate;
     this.endDate = endDate;
     this.isCancelled = isCancelled;
+  }
+
+  public UUID getReservationId() {
+    return reservationId;
+  }
+
+  public void setReservationId(UUID reservationId) {
+    this.reservationId = reservationId;
   }
 
   public UUID getId() {

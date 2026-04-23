@@ -334,6 +334,7 @@ public class TouristService {
     double price = nights * rental.getValueNight();
 
     ReservationResponse response = new ReservationResponse();
+    response.setReservationId(reservation.getId());
     response.setId(rental.getId());
     response.setName(rental.getName());
     response.setDescription(rental.getDescription());
