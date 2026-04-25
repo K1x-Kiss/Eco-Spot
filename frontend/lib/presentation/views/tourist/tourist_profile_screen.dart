@@ -4,6 +4,8 @@ import 'package:frontend/domain/providers/user_provider.dart';
 import 'package:frontend/domain/providers/secure_storage_provider.dart';
 import 'package:frontend/presentation/widgets/tourist_sidebar.dart';
 import 'package:frontend/presentation/widgets/tourist_bottom_nav.dart';
+import 'package:frontend/util/location.dart';
+import 'package:frontend/util/cities.dart';
 
 class TouristProfileScreen extends StatefulWidget {
   const TouristProfileScreen({super.key});
@@ -33,6 +35,150 @@ class _TouristProfileScreenState extends State<TouristProfileScreen> {
     }
   }
 
+  Future<void> _updateLocation() async {
+    final secureStorage = context.read<SecureStorageProvider>();
+    
+    final position = await LocationUtils.getCurrentPosition();
+    if (position == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Unable to get location. Please enable GPS.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    debugPrint('Profile Location: lat=${position.latitude}, lng=${position.longitude}');
+
+    final currentLocation = LocationUtils.getNearestCity(position.latitude, position.longitude);
+    if (currentLocation == null) {
+      return;
+    }
+
+    debugPrint('Profile Location: city=${currentLocation['city']}, country=${currentLocation['country']}');
+
+    await secureStorage.writeLocation(
+      currentLocation['city']!,
+      currentLocation['country']!,
+    );
+
+    final token = await secureStorage.read('token');
+    if (token != null) {
+      await _userProvider.updateLocation(
+        token,
+        currentLocation['city']!,
+        currentLocation['country']!,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Location updated to ${currentLocation['city']}, ${currentLocation['country']}',
+            ),
+            backgroundColor: const Color(0xFFFF385C),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _showCityPicker() async {
+    String? selectedCity;
+    String? selectedCountry;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          minChildSize: 0.5,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (context, scrollController) {
+            return StatefulBuilder(
+              builder: (context, setSheetState) {
+                return Column(
+                  children: [
+                    const SizedBox(height: 16),
+                    Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Select City',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Expanded(
+                      child: ListView.builder(
+                        controller: scrollController,
+                        itemCount: CityData.countryList.length,
+                        itemBuilder: (context, countryIndex) {
+                          final country = CityData.countryList[countryIndex];
+                          final cities = CityData.getCitiesForCountry(country);
+                          return ExpansionTile(
+                            title: Text(country),
+                            children: cities.map((city) {
+                              return ListTile(
+                                title: Text(city.replaceAll('_', ' ')),
+                                onTap: () {
+                                  selectedCity = city;
+                                  selectedCountry = country;
+                                  Navigator.pop(context);
+                                },
+                              );
+                            }).toList(),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+
+    if (selectedCity != null && selectedCountry != null) {
+      await _saveManualLocation(selectedCity!, selectedCountry!);
+    }
+  }
+
+  Future<void> _saveManualLocation(String city, String country) async {
+    final secureStorage = context.read<SecureStorageProvider>();
+    await secureStorage.writeLocation(city, country);
+
+    final token = await secureStorage.read('token');
+    if (token != null) {
+      await _userProvider.updateLocation(token, city, country);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Location updated to $city, $country'),
+            backgroundColor: const Color(0xFFFF385C),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider.value(
@@ -50,7 +196,13 @@ class _TouristProfileScreenState extends State<TouristProfileScreen> {
           backgroundColor: Colors.transparent,
           elevation: 0,
           foregroundColor: const Color(0xFFFF385C),
-          actions: const [Icon(Icons.notifications)],
+          actions: [
+              IconButton(
+                icon: const Icon(Icons.my_location),
+                onPressed: _updateLocation,
+              ),
+              const Icon(Icons.notifications),
+            ],
         ),
         drawer: const TouristSidebar(),
         body: Consumer<UserProvider>(
@@ -161,6 +313,8 @@ class _TouristProfileScreenState extends State<TouristProfileScreen> {
                               Icons.location_on,
                               'Current City',
                               user.currentCity ?? 'Not set',
+                              showEdit: true,
+                              onEdit: _showCityPicker,
                             ),
                             const Divider(),
                             _buildInfoRow(
@@ -197,29 +351,37 @@ class _TouristProfileScreenState extends State<TouristProfileScreen> {
     );
   }
 
-  Widget _buildInfoRow(IconData icon, String label, String value) {
+  Widget _buildInfoRow(IconData icon, String label, String value, {bool showEdit = false, VoidCallback? onEdit}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
           Icon(icon, size: 20, color: Colors.grey),
           const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey,
+Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey,
+                  ),
                 ),
-              ),
-              Text(
-                value,
-                style: const TextStyle(fontSize: 16),
-              ),
-            ],
+                Text(
+                  value,
+                  style: const TextStyle(fontSize: 16),
+                ),
+              ],
+            ),
           ),
+          if (showEdit && onEdit != null)
+            IconButton(
+              icon: const Icon(Icons.edit, size: 20),
+              onPressed: onEdit,
+              color: const Color(0xFFFF385C),
+            ),
         ],
       ),
     );

@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/data/repository_implementations/auth_repository.dart';
 import 'package:frontend/domain/models/rental.dart';
+import 'package:frontend/presentation/views/business/business_dashboard.dart';
+import 'package:frontend/presentation/views/business/business_form.dart';
+import 'package:frontend/presentation/views/experience/experience_dashboard.dart';
+import 'package:frontend/presentation/views/experience/experience_form.dart';
 import 'package:frontend/presentation/views/host/host_bundle.dart';
 import 'package:frontend/presentation/views/tourist/tourist_bundle.dart';
 import 'package:frontend/presentation/views/host/reservations_screen.dart';
 import 'package:frontend/presentation/views/auth/auth_bundle.dart';
 import 'package:frontend/presentation/views/splash_screen.dart';
-import 'package:frontend/presentation/business/business_form.dart';
-import 'package:frontend/presentation/experiences/experience_form.dart';
-import 'package:frontend/presentation/experiences/experience_dashboard.dart';
 
 class Routes {
   static const String initialRoute = splashScreen;
@@ -87,7 +88,8 @@ class Routes {
         rentalName: args['rentalName']!,
       );
     },
-    businessFormScreen: (context) => AddBusinessScreen(),
+    businessDashboardScreen: (context) => BusinessPortfolio(),
+    businessFormScreen: (context) => AddExperienceScreen(),
     experienceDashboardScreen: (context) => ExperiencesDashboard(),
     experienceFormScreen: (context) => AddExperienceScreen(),
     adminHomeScreen: (context) =>

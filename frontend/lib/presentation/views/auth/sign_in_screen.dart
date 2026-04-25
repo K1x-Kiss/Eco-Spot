@@ -136,12 +136,12 @@ class _SignInScreenState extends State<SignInScreen> {
 
   Future<bool> _detectAndSaveLocation() async {
     try {
-      final hasPermission = await LocationUtils.checkPermission();
-      if (!hasPermission) {
+      final position = await LocationUtils.getCurrentPosition();
+      if (position == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('GPS permission is required for automatic detection'),
+              content: Text('Unable to get location. Please enable GPS.'),
               backgroundColor: Colors.red,
             ),
           );
@@ -149,7 +149,10 @@ class _SignInScreenState extends State<SignInScreen> {
         return false;
       }
 
-      final locationData = await LocationUtils.getCurrentCityAndCountry();
+      final locationData = LocationUtils.getNearestCity(
+        position.latitude,
+        position.longitude,
+      );
       if (locationData != null && mounted) {
         final secureStorage = context.read<SecureStorageProvider>();
         await secureStorage.writeLocation(

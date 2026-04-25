@@ -3,9 +3,11 @@ import 'package:provider/provider.dart';
 import 'package:frontend/domain/models/rental.dart';
 import 'package:frontend/domain/providers/tourist_provider.dart';
 import 'package:frontend/domain/providers/secure_storage_provider.dart';
+import 'package:frontend/domain/providers/user_provider.dart';
 import 'package:frontend/presentation/routes/routes.dart';
 import 'package:frontend/presentation/widgets/tourist_sidebar.dart';
 import 'package:frontend/presentation/widgets/tourist_bottom_nav.dart';
+import 'package:frontend/util/location.dart';
 
 class TouristHomeScreen extends StatefulWidget {
   const TouristHomeScreen({super.key});
@@ -24,8 +26,65 @@ class _TouristHomeScreenState extends State<TouristHomeScreen> {
     super.initState();
     _touristProvider = TouristProvider();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadItems();
+      _initLocationAndLoadItems();
     });
+  }
+
+  Future<void> _initLocationAndLoadItems() async {
+    await _initLocation();
+    _loadItems();
+  }
+
+  Future<void> _initLocation() async {
+    final secureStorage = context.read<SecureStorageProvider>();
+    
+    // Get current GPS position - this will trigger system permission dialog if needed
+    final position = await LocationUtils.getCurrentPosition();
+    if (position == null) {
+      debugPrint('Location: Unable to get position');
+      return;
+    }
+
+    debugPrint('Location: lat=${position.latitude}, lng=${position.longitude}');
+
+    // Find nearest city using the position coordinates
+    final currentLocation = LocationUtils.getNearestCity(position.latitude, position.longitude);
+    if (currentLocation == null) {
+      return;
+    }
+
+    debugPrint('Location: city=${currentLocation['city']}, country=${currentLocation['country']}');
+
+    // Save and update API with new location
+    final savedLocation = await secureStorage.readLocation();
+    if (savedLocation == null ||
+        savedLocation['city'] != currentLocation['city'] ||
+        savedLocation['country'] != currentLocation['country']) {
+      await secureStorage.writeLocation(
+        currentLocation['city']!,
+        currentLocation['country']!,
+      );
+
+      final token = await secureStorage.read('token');
+      if (token != null) {
+        final userProvider = UserProvider();
+        await userProvider.updateLocation(
+          token,
+          currentLocation['city']!,
+          currentLocation['country']!,
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Location set to ${currentLocation['city']}, ${currentLocation['country']}',
+              ),
+              backgroundColor: const Color(0xFFFF385C),
+            ),
+          );
+        }
+      }
+    }
   }
 
   Future<void> _loadItems() async {
