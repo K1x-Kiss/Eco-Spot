@@ -1,7 +1,8 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 
 Map<String, dynamic> decodeJwt(String token) {
-  print(token);
+  debugPrint(token);
   final parts = token.split('.');
   if (parts.length != 3) {
     throw const FormatException('Invalid JWT token');

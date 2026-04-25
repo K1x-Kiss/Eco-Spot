@@ -8,6 +8,9 @@ class SecureStorageProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
+  static const String keyDetectedCity = 'detectedCity';
+  static const String keyDetectedCountry = 'detectedCountry';
+
   Future<void> write(String key, String value) async {
     _isLoading = true;
     _error = null;
@@ -21,6 +24,28 @@ class SecureStorageProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  Future<void> writeLocation(String city, String country) async {
+    await write(keyDetectedCity, city);
+    await write(keyDetectedCountry, country);
+  }
+
+  Future<String?> readDetectedCity() async {
+    return read(keyDetectedCity);
+  }
+
+  Future<String?> readDetectedCountry() async {
+    return read(keyDetectedCountry);
+  }
+
+  Future<Map<String, String>?> readLocation() async {
+    final city = await readDetectedCity();
+    final country = await readDetectedCountry();
+    if (city != null && country != null) {
+      return {'city': city, 'country': country};
+    }
+    return null;
   }
 
   Future<String?> read(String key) async {

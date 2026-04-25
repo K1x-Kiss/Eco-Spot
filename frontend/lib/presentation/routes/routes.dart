@@ -6,10 +6,9 @@ import 'package:frontend/presentation/views/tourist/tourist_bundle.dart';
 import 'package:frontend/presentation/views/host/reservations_screen.dart';
 import 'package:frontend/presentation/views/auth/auth_bundle.dart';
 import 'package:frontend/presentation/views/splash_screen.dart';
-import 'package:frontend/presentation/business/business_dashboard.dart';
 import 'package:frontend/presentation/business/business_form.dart';
-import 'package:frontend/presentation/experiences/experience_dashboard.dart';
 import 'package:frontend/presentation/experiences/experience_form.dart';
+import 'package:frontend/presentation/experiences/experience_dashboard.dart';
 
 class Routes {
   static const String initialRoute = splashScreen;
@@ -20,7 +19,6 @@ class Routes {
   static const String homeScreen = 'home';
   static const String touristHomeScreen = 'tourist_home';
   static const String hostHomeScreen = 'host_home';
-  static const String businessHomeScreen = 'business_home';
   static const String adminHomeScreen = 'admin_home';
   static const String createRentalScreen = 'create_rental';
   static const String reservationsScreen = 'reservations';
@@ -47,8 +45,7 @@ class Routes {
     touristReservationsScreen: (context) => const TouristReservationsScreen(),
     touristProfileScreen: (context) => const TouristProfileScreen(),
     touristRentalDetailScreen: (context) {
-      final rental =
-          ModalRoute.of(context)!.settings.arguments as Rental;
+      final rental = ModalRoute.of(context)!.settings.arguments as Rental;
       return TouristRentalDetailScreen(rental: rental);
     },
     touristReservationFormScreen: (context) {
@@ -90,8 +87,6 @@ class Routes {
         rentalName: args['rentalName']!,
       );
     },
-    businessHomeScreen: (context) =>
-        BusinessPortfolio(),
     businessFormScreen: (context) => AddBusinessScreen(),
     experienceDashboardScreen: (context) => ExperiencesDashboard(),
     experienceFormScreen: (context) => AddExperienceScreen(),

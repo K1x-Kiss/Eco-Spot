@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:frontend/data/repository_implementations/host_repository.dart';
 import 'package:frontend/domain/models/rental.dart';
+import 'package:frontend/util/cities.dart';
 
 class RentalFormProvider extends ChangeNotifier {
   final HostRepository _hostRepository = HostRepository();
@@ -25,53 +26,10 @@ class RentalFormProvider extends ChangeNotifier {
   String selectedCity = 'MEDELLIN';
   String selectedCountry = 'COLOMBIA';
 
-  static const Map<String, List<String>> countryCities = {
-    'COLOMBIA': [
-      'MEDELLIN', 'BOGOTA', 'CALI', 'BARRANQUILLA', 'CARTAGENA',
-      'BUCARAMANGA', 'SANTA_MARTA', 'MANIZALES', 'PEREIRA', 'ARMENIA',
-    ],
-    'ARGENTINA': [
-      'BUENOS_AIRES', 'CORDOBA', 'ROSARIO', 'Mendoza', 'TUCUMAN',
-      'CHACO', 'CORRIENTES', 'NEUQUEN',
-    ],
-    'CHILE': [
-      'SANTIAGO', 'VALPARAISO', 'CONCEPCION', 'LA_SERENA', 'ANTOFAGASTA',
-      'RANCAGUA', 'TALCA', 'CHILLAN',
-    ],
-    'MEXICO': [
-      'MEXICO_CITY', 'GUADALAJARA', 'MONTERREY', 'CANCUN', 'PUEBLA',
-      'TOLUCA', 'VERACRUZ', 'LEON', 'TIJUANA', 'MERIDA',
-    ],
-    'PERU': [
-      'LIMA', 'AREQUIPA', 'CUSCO', 'TRUJILLO', 'CHICLAYO',
-      'IQUITOS', 'HUANCAYO', 'CALLAO', 'AYACUCHO',
-    ],
-    'ECUADOR': [
-      'QUITO', 'GUAYAQUIL', 'CUENCA', 'MACHALA', 'SANTO_DOMINGO',
-      'MANTA', 'PORTOVIEJO', 'AMBATO', 'MILAGRO', 'ESMERALDAS',
-    ],
-    'PANAMA': [
-      'PANAMA_CITY', 'COLON', 'DAVID', 'BOCAS_DEL_TORO', 'PENONOME',
-      'CHITRE', 'SANTIAGO', 'LA_CHORRERA', 'AGUADULCE', 'LOS_SANTOS',
-    ],
-    'COSTA_RICA': [
-      'SAN_JOSE', 'ALAJUELA', 'CARTAGO', 'HEREDIA', 'LIBERIA',
-      'LIMON', 'PUNTARENAS', 'QUEPOS', 'TURRIALBA', 'CORDOBILLA',
-    ],
-    'URUGUAY': [
-      'MONTEVIDEO', 'SALTO', 'PUNTA_DEL_ESTE', 'COLONIA', 'MALDONADO',
-      'Paysandu', 'RIVERA', 'ARTIGAS', 'CERRO_LARGO', 'SORIANO',
-    ],
-    'BRAZIL': [
-      'SAO_PAULO', 'RIO_DE_JANEIRO', 'BRASILIA', 'SALVADOR', 'FORTALEZA',
-      'BELO_HORIZONTE', 'MANAUS', 'CURITIBA', 'RECIFE', 'PORTO_ALEGRE',
-    ],
-  };
-
-  static List<String> get countryList => countryCities.keys.toList();
+  static List<String> get countryList => CityData.countryList;
 
   List<String> get citiesForSelectedCountry =>
-      countryCities[selectedCountry] ?? [];
+      CityData.getCitiesForCountry(selectedCountry);
 
   void initForCreate() {
     isEditMode = false;
@@ -115,7 +73,7 @@ class RentalFormProvider extends ChangeNotifier {
 
   void setCountry(String country) {
     selectedCountry = country;
-    selectedCity = countryCities[country]?.first ?? 'MEDELLIN';
+    selectedCity = CityData.getCitiesForCountry(country).firstOrNull ?? 'MEDELLIN';
     notifyListeners();
   }
 

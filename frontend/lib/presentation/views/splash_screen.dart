@@ -57,13 +57,19 @@ class _SplashScreenState extends State<SplashScreen> {
         Navigator.pushReplacementNamed(context, Routes.hostHomeScreen);
         break;
       case 'BUSINESS':
-        Navigator.pushReplacementNamed(context, Routes.businessHomeScreen);
+        Navigator.pushReplacementNamed(context, Routes.businessDashboardScreen);
         break;
       case 'EXPERIENCE':
+        Navigator.pushReplacementNamed(
+          context,
+          Routes.experienceDashboardScreen,
+        );
+      case 'ADMINISTRATOR':
         Navigator.pushReplacementNamed(context, Routes.adminHomeScreen);
         break;
+
       default:
-        Navigator.pushReplacementNamed(context, Routes.homeScreen);
+        Navigator.pushReplacementNamed(context, Routes.signInScreen);
     }
   }
 
@@ -84,12 +90,11 @@ class _SplashScreenState extends State<SplashScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            const CircularProgressIndicator(
-              color: Color(0xFFFF385C),
-            ),
+            const CircularProgressIndicator(color: Color(0xFFFF385C)),
           ],
         ),
       ),
     );
   }
 }
+

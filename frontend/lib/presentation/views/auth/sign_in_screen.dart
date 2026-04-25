@@ -3,8 +3,10 @@ import 'package:provider/provider.dart';
 import 'package:frontend/domain/repository_interfaces/auth_interface.dart';
 import 'package:frontend/presentation/routes/routes.dart';
 import 'package:frontend/domain/providers/secure_storage_provider.dart';
+import 'package:frontend/domain/providers/user_provider.dart';
 import 'package:frontend/util/validators/jwt.dart';
 import 'package:frontend/util/validators/validators.dart';
+import 'package:frontend/util/location.dart';
 
 class SignInScreen extends StatefulWidget {
   final AuthInterface authInterface;
@@ -68,28 +70,133 @@ class _SignInScreenState extends State<SignInScreen> {
       return;
     }
 
+    if (role == 'TOURIST') {
+      _showGpsDetectionDialog().then((enabled) {
+        _performNavigation(role);
+      });
+    } else {
+      _performNavigation(role);
+    }
+  }
+
+  Future<void> _performNavigation(String role) async {
     switch (role) {
       case 'TOURIST':
-        // TODO: Navigate to Tourist home screen
         Navigator.pushReplacementNamed(context, Routes.touristHomeScreen);
         break;
       case 'HOST':
-        // TODO: Navigate to Host dashboard
         Navigator.pushReplacementNamed(context, Routes.hostHomeScreen);
         break;
       case 'BUSINESS':
-        // TODO: Navigate to Business panel
-        Navigator.pushReplacementNamed(context, Routes.businessHomeScreen);
+        Navigator.pushReplacementNamed(context, Routes.businessDashboardScreen);
         break;
       case 'EXPERIENCE':
-        // TODO: Navigate to Experience panel
-        Navigator.pushReplacementNamed(context, Routes.adminHomeScreen);
+        Navigator.pushReplacementNamed(context, Routes.experienceDashboardScreen);
         break;
       case 'ADMINISTRATOR':
-        // TODO: Navigate to Administrator panel
         Navigator.pushReplacementNamed(context, Routes.adminHomeScreen);
         break;
+      default:
+        Navigator.pushReplacementNamed(context, Routes.signInScreen);
     }
+  }
+
+  Future<bool> _showGpsDetectionDialog() async {
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('Enable GPS Location'),
+        content: const Text(
+          'We can automatically detect your city to show nearby rentals. '
+          'Would you like to enable this feature?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Not Now'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFF385C),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Enable'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true) {
+      return await _detectAndSaveLocation();
+    }
+    return false;
+  }
+
+  Future<bool> _detectAndSaveLocation() async {
+    try {
+      final hasPermission = await LocationUtils.checkPermission();
+      if (!hasPermission) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('GPS permission is required for automatic detection'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return false;
+      }
+
+      final locationData = await LocationUtils.getCurrentCityAndCountry();
+      if (locationData != null && mounted) {
+        final secureStorage = context.read<SecureStorageProvider>();
+        await secureStorage.writeLocation(
+          locationData['city']!,
+          locationData['country']!,
+        );
+        
+        final token = await secureStorage.read('token');
+        if (token != null) {
+          final userProvider = UserProvider();
+          final success = await userProvider.updateLocation(
+            token,
+            locationData['city']!,
+            locationData['country']!,
+          );
+          if (!success && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Location saved locally. Error updating on server.'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+            return true;
+          }
+        }
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Location detected: ${locationData['city']}, ${locationData['country']}',
+            ),
+            backgroundColor: const Color(0xFFFF385C),
+          ),
+        );
+        return true;
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error detecting location: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+    return false;
   }
 
   @override

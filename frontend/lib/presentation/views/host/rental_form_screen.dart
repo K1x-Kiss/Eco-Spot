@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:frontend/domain/models/rental.dart';
 import 'package:frontend/domain/providers/secure_storage_provider.dart';
 import 'package:frontend/domain/providers/rental_form_provider.dart';
+import 'package:frontend/util/validators/validators.dart';
 
 class RentalFormScreen extends StatefulWidget {
   final Rental? rental;
@@ -101,6 +102,7 @@ class _RentalFormScreenState extends State<RentalFormScreen> {
                         label: 'Property Name',
                         hint: 'e.g., Beach House',
                         required: true,
+                        customValidator: validateNameMax100,
                       ),
                       const SizedBox(height: 16),
                       _buildTextField(
@@ -108,14 +110,16 @@ class _RentalFormScreenState extends State<RentalFormScreen> {
                         label: 'Description',
                         hint: 'Describe your property...',
                         maxLines: 3,
+                        customValidator: validateDescription300,
                       ),
                       const SizedBox(height: 16),
                       _buildTextField(
                         controller: formProvider.contactController,
                         label: 'Contact Phone',
-                        hint: 'e.g., +1234567890',
+                        hint: 'e.g., 1234567890',
                         keyboardType: TextInputType.phone,
                         required: true,
+                        customValidator: validatePhone10Digits,
                       ),
                     ],
                   ),
@@ -374,6 +378,7 @@ class _RentalFormScreenState extends State<RentalFormScreen> {
     TextInputType? keyboardType,
     bool required = false,
     int maxLines = 1,
+    String? Function(String?)? customValidator,
   }) {
     return TextFormField(
       controller: controller,
@@ -385,14 +390,15 @@ class _RentalFormScreenState extends State<RentalFormScreen> {
         filled: true,
         fillColor: Colors.white,
       ),
-      validator: required
-          ? (value) {
-              if (value == null || value.isEmpty) {
-                return '$label is required';
-              }
-              return null;
-            }
-          : null,
+      validator: customValidator ??
+          (required
+              ? (value) {
+                  if (value == null || value.isEmpty) {
+                    return '$label is required';
+                  }
+                  return null;
+                }
+              : null),
     );
   }
 

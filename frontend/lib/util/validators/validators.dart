@@ -43,3 +43,41 @@ String? validateRole(String? value) {
   }
   return null;
 }
+
+String? validateNameMax100(String? value) {
+  if (value == null || value.isEmpty) {
+    return 'Name is required';
+  }
+  if (value.length > 100) {
+    return 'Name must be 100 characters or less';
+  }
+  return null;
+}
+
+String? validateDescription300(String? value) {
+  if (value != null && value.length > 300) {
+    return 'Description must be 300 characters or less';
+  }
+  return null;
+}
+
+String? validatePhone10Digits(String? value) {
+  if (value == null || value.isEmpty) {
+    return 'Phone is required';
+  }
+  final digitsOnly = value.replaceAll(RegExp(r'\D'), '');
+  if (digitsOnly.length != 10) {
+    return 'Phone must be 10 digits';
+  }
+  return null;
+}
+
+String? validateConfirmPassword(String? value, String password) {
+  if (value == null || value.isEmpty) {
+    return 'Password confirmation is required';
+  }
+  if (value != password) {
+    return 'Passwords do not match';
+  }
+  return null;
+}

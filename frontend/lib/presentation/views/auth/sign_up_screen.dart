@@ -18,7 +18,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _surnameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
   bool _isLoading = false;
 
   String _selectedCity = 'MEDELLIN';
@@ -162,6 +164,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     _surnameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -362,6 +365,35 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           ),
                         ),
                         validator: validatePassword,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _confirmPasswordController,
+                        obscureText: _obscureConfirmPassword,
+                        decoration: InputDecoration(
+                          labelText: 'Confirm Password',
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          filled: true,
+                          fillColor: const Color(0xFFF7F7F7),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscureConfirmPassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscureConfirmPassword = !_obscureConfirmPassword;
+                              });
+                            },
+                          ),
+                        ),
+                        validator: (value) => validateConfirmPassword(
+                          value,
+                          _passwordController.text,
+                        ),
                       ),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
